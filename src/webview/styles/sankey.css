@@ -1,0 +1,10 @@
+.sankey-lens{border:1px solid var(--xp-border-subtle);box-shadow:var(--xp-card-shadow)}
+.sankey-heading h2{font-size:15px;font-weight:680;letter-spacing:-.01em}
+.sankey-diagram-wrap{background:radial-gradient(ellipse at 50% 50%,color-mix(in srgb,var(--xp-accent) 4%,transparent),transparent 65%)}
+.flow-ribbon{transition:opacity var(--xp-duration-medium) ease;cursor:crosshair}
+.flow-ribbon:hover{opacity:1;filter:brightness(1.2)}
+.flow-dimmed{opacity:.15}.sankey-bar{stroke-width:1.5px}
+.sankey-peer:hover .sankey-bar,.sankey-peer.flow-is-hovered .sankey-bar{stroke:var(--xp-accent);stroke-width:2.5px}
+.sankey-peer rect[role=button]:focus-visible{stroke:var(--xp-accent);stroke-width:3px;outline:none}
+.flow-metrics strong{font-variant-numeric:tabular-nums}
+@media(prefers-contrast:more){.flow-ribbon{opacity:1!important}.sankey-bar{stroke-width:2px}}

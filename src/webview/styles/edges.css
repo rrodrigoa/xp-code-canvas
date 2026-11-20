@@ -1,0 +1,9 @@
+/* Relationships are readable in densely connected views without visual dominance. */
+.uml-relation{transition:stroke-width var(--xp-duration-fast) ease,opacity var(--xp-duration-fast) ease;vector-effect:non-scaling-stroke}
+.react-flow__edge.uml-relation-strong .uml-relation{stroke-width:2.7px}
+.react-flow__edge.uml-relation-muted .uml-relation{opacity:.16}
+.edge-label{border:1px solid var(--xp-border);border-radius:6px;padding:5px 8px;background:color-mix(in srgb,var(--xp-surface-1) 94%,transparent);box-shadow:var(--xp-card-shadow);font-weight:570;font-size:10px;color:var(--xp-text);max-width:210px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;backdrop-filter:blur(6px)}
+.edge-label-dot{width:6px;height:6px;display:inline-block;border-radius:50%;margin-right:4px;vertical-align:middle}
+.edge-label.edge-uncertain{border-style:dashed}
+.react-flow__edge-path{vector-effect:non-scaling-stroke}
+@media(prefers-contrast:more){.uml-relation{opacity:1!important;stroke-width:2px!important}.edge-label{border-width:2px;backdrop-filter:none}}

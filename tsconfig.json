@@ -1,0 +1,9 @@
+{
+  "compilerOptions": {
+    "target": "ES2022", "module": "CommonJS", "moduleResolution": "Node",
+    "strict": true, "esModuleInterop": true, "skipLibCheck": true,
+    "types": ["node", "vscode", "mocha"], "noEmit": true,
+    "rootDir": ".", "forceConsistentCasingInFileNames": true
+  },
+  "include": ["src/extension/**/*.ts", "src/shared/**/*.ts", "tests/extension/**/*.ts"]
+}

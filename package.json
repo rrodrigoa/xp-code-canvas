@@ -1,0 +1,249 @@
+{
+  "name": "xp-code-canvas",
+  "displayName": "XP Python UML Canvas",
+  "description": "Production-oriented Python UML canvas: measured stable layouts, contextual navigation, Git attribution, Sankey flow, accessible and responsive views",
+  "publisher": "xp-libs",
+  "version": "0.6.0",
+  "license": "MIT",
+  "private": true,
+  "repository": { "type": "git", "url": "https://github.com/rrodrigoa/xp-code-canvas.git" },
+  "engines": {
+    "vscode": "^1.96.0"
+  },
+  "categories": [
+    "Visualization",
+    "Other"
+  ],
+  "keywords": [
+    "python",
+    "uml",
+    "graph",
+    "code navigation",
+    "architecture"
+  ],
+  "main": "./dist/extension/extension.js",
+  "activationEvents": [
+    "onCommand:xpCodeCanvas.open",
+    "onCommand:xpCodeCanvas.focusCurrentFile",
+    "onCommand:xpCodeCanvas.focusFile",
+    "onCommand:xpCodeCanvas.returnToCanvas",
+    "onWebviewPanel:xpCodeCanvas.canvas"
+  ],
+  "icon": "media/icon.png",
+  "contributes": {
+    "commands": [
+      {
+        "command": "xpCodeCanvas.open",
+        "title": "Open UML Canvas",
+        "category": "Python UML Canvas",
+        "icon": "$(type-hierarchy)"
+      },
+      {
+        "command": "xpCodeCanvas.focusCurrentFile",
+        "title": "Focus Current File in UML Canvas",
+        "category": "Python UML Canvas",
+        "icon": "$(target)"
+      },
+      {
+        "command": "xpCodeCanvas.focusFile",
+        "title": "Focus File in UML Canvas",
+        "category": "Python UML Canvas",
+        "icon": "$(graph)"
+      },
+      {
+        "command": "xpCodeCanvas.openNodeInEditor",
+        "title": "Open Selected UML Node in Editor",
+        "category": "Python UML Canvas",
+        "icon": "$(screen-full)"
+      },
+      {
+        "command": "xpCodeCanvas.returnToCanvas",
+        "title": "Return to UML Canvas",
+        "category": "Python UML Canvas",
+        "icon": "$(graph)"
+      },
+      {
+        "command": "xpCodeCanvas.alignFocusedFile",
+        "title": "Align Focused File",
+        "category": "Python UML Canvas"
+      },
+      {
+        "command": "xpCodeCanvas.resetLayout",
+        "title": "Reset UML Layout",
+        "category": "Python UML Canvas"
+      },
+      {
+        "command": "xpCodeCanvas.fitView",
+        "title": "Fit UML Graph to View",
+        "category": "Python UML Canvas"
+      },
+      {
+        "command": "xpCodeCanvas.toggleExplodedMethods",
+        "title": "Expand or Collapse UML Method Nodes",
+        "category": "Python UML Canvas"
+      }
+    ],
+    "menus": {
+      "explorer/context": [
+        {
+          "command": "xpCodeCanvas.focusFile",
+          "when": "resourceExtname == .py",
+          "group": "navigation@15"
+        }
+      ],
+      "editor/title": [
+        {
+          "command": "xpCodeCanvas.returnToCanvas",
+          "when": "editorLangId == python && xpCodeCanvas.hasCanvas",
+          "group": "navigation@10"
+        }
+      ]
+    },
+    "keybindings": [
+      {
+        "command": "xpCodeCanvas.returnToCanvas",
+        "key": "ctrl+alt+u",
+        "mac": "cmd+alt+u",
+        "when": "editorLangId == python && xpCodeCanvas.hasCanvas"
+      }
+    ],
+    "configuration": {
+      "title": "XP Code Canvas",
+      "properties": {
+        "xpCodeCanvas.pythonPath": {
+          "type": "string",
+          "default": "",
+          "description": "Python executable for extension-shipped offline AST analyzer; empty uses python/python3."
+        },
+        "xpCodeCanvas.defaultSemanticZoom": {
+          "type": "string",
+          "enum": [
+            "overview",
+            "structure",
+            "source"
+          ],
+          "default": "structure"
+        },
+        "xpCodeCanvas.showImportEdges": {
+          "type": "boolean",
+          "default": true
+        },
+        "xpCodeCanvas.showCallEdges": {
+          "type": "boolean",
+          "default": true
+        },
+        "xpCodeCanvas.showReferenceEdges": {
+          "type": "boolean",
+          "default": false
+        },
+        "xpCodeCanvas.focusNeighborhoodDepth": {
+          "type": "number",
+          "default": 2,
+          "minimum": 1,
+          "maximum": 20
+        },
+        "xpCodeCanvas.explodeMethods": {
+          "type": "boolean",
+          "default": false
+        },
+        "xpCodeCanvas.excludeGlobs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "**/.venv/**",
+            "**/venv/**",
+            "**/__pycache__/**",
+            "**/node_modules/**"
+          ]
+        },
+        "xpCodeCanvas.editorNavigationPreview": {
+          "type": "boolean",
+          "default": false
+        },
+        "xpCodeCanvas.layoutDirection": {
+          "type": "string",
+          "enum": [
+            "RIGHT",
+            "DOWN"
+          ],
+          "default": "RIGHT"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "dev:web": "vite --host 127.0.0.1 --port 5175 --strictPort --config vite.config.ts",
+    "build:web": "vite build --config vite.config.ts",
+    "build:extension": "node scripts/build-extension.mjs",
+    "build:extension-tests": "node scripts/build-extension-tests.mjs",
+    "build": "npm run build:web && npm run build:extension && npm run build:extension-tests",
+    "watch": "node scripts/build-extension.mjs --watch",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.webview.json && tsc --noEmit -p tsconfig.tests.json",
+    "lint": "eslint src tests",
+    "test:unit": "vitest run tests/unit --coverage",
+    "test:python": "python -m pytest -q python/tests --cov=python/src/xp_canvas_analysis --cov-branch --cov-report=term-missing",
+    "test:altitudes": "vitest run tests/unit/aggregation.test.ts",
+    "test:semantic-diff": "vitest run tests/unit/semanticDiff.test.ts",
+    "test:traces": "vitest run tests/unit/trace.test.ts",
+    "test:canvas-e2e": "playwright test",
+    "test:extension": "npm run build && vscode-test",
+    "test:desktop-e2e": "extest setup-and-run --config extester.config.json",
+    "test:real-repo": "node scripts/test-real-repository.mjs",
+    "package": "npm run build && vsce package --out dist/xp-code-canvas-0.6.0.vsix",
+    "verify:core": "npm run verify:fast && npm run test:canvas-e2e && npm run test:extension && npm run package",
+    "verify": "npm run verify:core && npm run test:desktop-e2e",
+    "test:contracts": "vitest run tests/unit/graphDelta.test.ts tests/unit/gitTree.test.ts",
+    "verify:fast": "npm run typecheck && npm run lint && npm run test:python && npm run test:visual-smoke && npm run test:unit && npm run test:visual-v6",
+    "test:visual-smoke": "node scripts/visual-smoke.cjs",
+    "test:visual-v6": "node scripts/v6-visual-smoke.cjs"
+  },
+  "dependencies": {
+    "@vscode/codicons": "^0.0.40",
+    "@xyflow/react": "^12.6.4",
+    "elkjs": "^0.10.0",
+    "prismjs": "^1.30.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "zod": "^3.25.20",
+    "zustand": "^5.0.5"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.26.0",
+    "@playwright/test": "^1.52.0",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^22.15.17",
+    "@types/prismjs": "^1.26.5",
+    "@types/react": "^19.1.2",
+    "@types/react-dom": "^19.1.2",
+    "@types/vscode": "^1.96.0",
+    "@vitejs/plugin-react": "^4.4.1",
+    "@vitest/coverage-v8": "^3.2.0",
+    "@vscode/test-cli": "^0.0.11",
+    "@vscode/test-electron": "^2.4.1",
+    "esbuild": "^0.25.4",
+    "eslint": "^9.26.0",
+    "globals": "^16.0.0",
+    "mocha": "^11.2.2",
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^8.32.1",
+    "vite": "^6.3.5",
+    "vitest": "^3.2.0",
+    "vscode-extension-tester": "^8.0.0",
+    "@vscode/vsce": "^3.5.0"
+  },
+  "extensionKind": [
+    "workspace"
+  ],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": false,
+      "description": "The extension runs an isolated local Python analyzer; trust is required before launching worker processes."
+    },
+    "virtualWorkspaces": {
+      "supported": "limited",
+      "description": "UML graph and source navigation work where workspace.fs supports reads. Local Git comparison requires a file-backed workspace."
+    }
+  }
+}

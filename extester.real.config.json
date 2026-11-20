@@ -1,0 +1,9 @@
+{
+  "extends": "./extester.config.json",
+  "run": {
+    "testFiles": ["tests/desktop/realRepository.test.js"],
+    "resources": [".validation-runtime/temp/flask"],
+    "mochaConfig": "tests/desktop/.mocharc.real.json",
+    "settings": "tests/desktop/real-settings.json"
+  }
+}

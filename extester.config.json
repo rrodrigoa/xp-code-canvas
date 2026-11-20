@@ -1,0 +1,10 @@
+{
+  "$schema": "./node_modules/vscode-extension-tester/resources/extester.schema.json",
+  "setup": { "storage": "test-resources" },
+  "run": {
+    "storage": "test-resources",
+    "testFiles": ["tests/desktop/navigation.test.js"],
+    "resources": ["tests/fixtures/sample_project"],
+    "mochaConfig": "tests/desktop/.mocharc.json"
+  }
+}

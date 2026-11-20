@@ -1,0 +1,16 @@
+/* V6 design tokens. All critical foreground/background colors resolve through VS Code
+   themes; hue alone is never used to encode source or Git state. */
+:root {
+  --xp-space-1:4px;--xp-space-2:8px;--xp-space-3:12px;--xp-space-4:16px;
+  --xp-space-5:20px;--xp-space-6:24px;
+  --xp-radius-xs:4px;--xp-radius-sm:6px;--xp-radius-md:10px;--xp-radius-lg:14px;
+  --xp-control-height:32px;--xp-control-target:32px;
+  --xp-type-xxs:10px;--xp-type-xs:11px;--xp-type-sm:12px;--xp-type-md:13px;--xp-type-lg:15px;
+  --xp-font-code:var(--vscode-editor-font-family,'Cascadia Code',Consolas,monospace);
+  --xp-ease-out:cubic-bezier(.18,.72,.2,1);
+  --xp-duration-fast:110ms;--xp-duration-medium:210ms;
+  --xp-card-shadow:0 3px 14px rgba(0,0,0,.13),0 1px 3px rgba(0,0,0,.08);
+  --xp-card-shadow-hover:0 6px 22px rgba(0,0,0,.20),0 1px 3px rgba(0,0,0,.08);
+  --xp-selected-ring:0 0 0 2px var(--xp-accent),0 0 0 5px color-mix(in srgb,var(--xp-accent) 20%,transparent);
+  --xp-flyout-shadow:0 10px 36px rgba(0,0,0,.26),0 2px 8px rgba(0,0,0,.10);
+}

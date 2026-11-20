@@ -1,0 +1,46 @@
+/* A single default toolbar; advanced filters and Git comparison are progressive disclosure. */
+.canvas-shell .toolbar{min-height:52px;gap:8px;padding:7px 12px}
+.canvas-shell .filterbar{display:none}
+.canvas-shell .toolbar.is-advanced + .filterbar{display:flex;min-height:38px;animation:xp-slide-in var(--xp-duration-medium) var(--xp-ease-out)}
+.toolbar .app-brand{min-width:120px}.toolbar .brand-mark{border-radius:var(--xp-radius-md)}
+.toolbar-action-group{border-left:1px solid var(--xp-border-subtle);padding-left:7px}
+.toolbar .icon-button,.canvas-navigation .icon-button{min-width:var(--xp-control-target);min-height:var(--xp-control-target)}
+.toolbar .altitude-toolbar{border-radius:var(--xp-radius-md)}
+.toolbar .altitude-toolbar button{height:var(--xp-control-height)}
+.toolbar .select-field,.toolbar .search-field{height:var(--xp-control-height)}
+.search-field:focus-within{box-shadow:0 0 0 2px var(--xp-focus-shadow)}
+.toolbar .toolbar-action-group .icon-button:not(.is-active):hover{transform:translateY(-1px)}
+.graph-context{border-radius:var(--xp-radius-md);box-shadow:var(--xp-card-shadow);max-width:min(480px,calc(100vw - 32px))}
+.graph-breadcrumbs{max-width:min(460px,45vw)}
+.graph-context-meta{font-variant-numeric:tabular-nums}
+.graph-region .canvas-navigation,.graph-region .semantic-key{border-radius:var(--xp-radius-md);backdrop-filter:blur(8px)}
+.git-change-lens{top:66px;backdrop-filter:blur(8px)}
+.canvas-layout-chooser{display:flex;align-items:center;gap:6px;max-width:155px;height:var(--xp-control-height);padding:0 7px;border:1px solid var(--xp-border);background:var(--xp-surface-1);border-radius:var(--xp-radius-sm)}
+.canvas-layout-chooser .codicon{color:var(--xp-muted);font-size:13px}
+.canvas-layout-chooser select{min-width:0;max-width:120px;appearance:none;border:0;background:transparent;outline:0;color:var(--xp-text);font-size:11px;font-weight:600}
+.toolbar .search-field{max-width:260px}
+.canvas-status-pill{display:flex;gap:5px;align-items:center;border:1px solid var(--xp-border-subtle);border-radius:99px;padding:4px 8px;color:var(--xp-muted);font-size:10px;white-space:nowrap}
+.canvas-status-pill>i{color:var(--xp-added)}
+@keyframes xp-slide-in{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:1300px){.toolbar .brand-label small,.toolbar .toolbar-separator.hide-compact{display:none}.toolbar .app-brand{min-width:auto}.toolbar .altitude-toolbar button{padding:0 7px}.canvas-layout-chooser{max-width:120px}}
+@media(max-width:1030px){.toolbar{gap:5px}.toolbar .app-brand .brand-label{display:none}.toolbar .focus-select{max-width:140px}.toolbar .search-field{max-width:180px}.toolbar .altitude-toolbar button span{display:none}.toolbar .altitude-toolbar button{min-width:30px;justify-content:center}.toolbar .toolbar-action-group{gap:0;padding-left:3px}}
+@media(max-width:700px){.toolbar .focus-select{max-width:100px;min-width:75px}.toolbar .search-field{max-width:110px;flex-basis:80px}.toolbar .toolbar-action-group .icon-button:nth-last-child(n+4){display:none}.canvas-layout-chooser{max-width:90px}.canvas-status-pill{display:none}}
+@media(prefers-reduced-motion:reduce){.toolbar,.toolbar *, .graph-region *{animation-duration:.01ms!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
+.symbol-search{position:relative;flex:1 1 180px;max-width:260px;min-width:0}
+.symbol-search .search-field{width:100%;max-width:none}
+.symbol-search-results{position:absolute;top:calc(100% + 8px);left:0;width:clamp(250px,32vw,460px);max-height:min(430px,60vh);overflow:auto;z-index:70;background:var(--xp-surface-1);border:1px solid var(--xp-border);border-radius:var(--xp-radius-md);box-shadow:var(--xp-flyout-shadow);padding:5px}
+.symbol-search-results button{width:100%;display:flex;align-items:center;gap:10px;padding:8px 10px;text-align:left;border:0;border-radius:7px;background:transparent;color:var(--xp-text)}
+.symbol-search-results button:hover,.symbol-search-results button.active{background:var(--xp-surface-hover)}
+.symbol-search-results button>.codicon{font-size:15px;color:var(--xp-accent)}
+.symbol-search-results button>span{display:grid;gap:4px;min-width:0;flex:1}
+.symbol-search-results button strong{font-weight:570;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px}
+.symbol-search-results button small{font-size:10px;color:var(--xp-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.symbol-search-empty{padding:12px;color:var(--xp-muted);font-size:11px}
+@media(max-width:1000px){.symbol-search{max-width:180px;flex-basis:115px}}
+@media(max-width:700px){.symbol-search{max-width:112px;flex-basis:75px}.symbol-search-results{width:280px}}
+@media(forced-colors:active){
+ .uml-node,.uml-node.selected,.graph-context,.git-command-popover,.git-drawer,.filter-menu,.symbol-search-results{forced-color-adjust:auto;border:2px solid CanvasText!important;background:Canvas!important;color:CanvasText!important;box-shadow:none!important}
+ .uml-node.selected{outline:3px solid Highlight!important;outline-offset:3px}
+ .toolbar .icon-button:focus-visible,.uml-node button:focus-visible{outline:2px solid Highlight!important}
+ .edge-label,.proof-edge-label{border:1px solid CanvasText!important;background:Canvas!important;color:CanvasText!important}
+}

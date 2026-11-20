@@ -1,0 +1,78 @@
+name: CI / Python UML Canvas V6
+on:
+  push:
+  pull_request:
+jobs:
+  core:
+    strategy:
+      fail-fast: false
+      matrix: { os: [ubuntu-latest, windows-latest] }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.13' }
+      - name: Install locked JavaScript dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Install pinned Python test dependencies
+        run: python -m pip install -r python/requirements-test.txt
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run test:python
+      - run: npm run test:visual-smoke
+      - run: npm run test:visual-v6
+      - run: npm run test:unit
+      - run: npm run build
+      - run: npm run package
+      - uses: actions/upload-artifact@v4
+        with: { name: xp-code-canvas-${{ matrix.os }}, path: dist/*.vsix }
+  browser:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+      - run: npm ci --no-audit --no-fund
+      - run: npx playwright install chromium --with-deps
+      - run: npm run test:canvas-e2e
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: v6-browser-screenshots-and-traces, path: test-results/**, if-no-files-found: ignore }
+  extension-host:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+      - run: npm ci --no-audit --no-fund
+      - run: npm run build
+      - run: xvfb-run -a npm run test:extension
+  desktop-windows:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+      - run: npm ci --no-audit --no-fund
+      - run: npm run build
+      - run: npm run test:desktop-e2e
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: v6-desktop-windows-evidence, path: test-results/**, if-no-files-found: ignore }
+  real-repository-windows:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.13' }
+      - run: npm ci --no-audit --no-fund
+      - run: npm run test:real-repo
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: v6-flask-real-repository-evidence, path: test-results/real-repository/**, if-no-files-found: ignore }

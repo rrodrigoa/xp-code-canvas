@@ -1,0 +1,519 @@
+{
+  "schema": 1,
+  "nodes": [
+    {
+      "id": "04b15c3e27a44d059696",
+      "kind": "module",
+      "name": "api",
+      "qualifiedName": "api",
+      "uri": "file:///mnt/data/xp-code-canvas-starter/tests/fixtures/sample_project/api.py",
+      "root": "file:///mnt/data/xp-code-canvas-starter/tests/fixtures/sample_project",
+      "module": "api",
+      "moduleId": "04b15c3e27a44d059696",
+      "parentId": null,
+      "range": {
+        "startLine": 0,
+        "startCharacter": 0,
+        "endLine": 0,
+        "endCharacter": 0
+      },
+      "selectionRange": {
+        "startLine": 0,
+        "startCharacter": 0,
+        "endLine": 0,
+        "endCharacter": 0
+      },
+      "version": 1,
+      "visibility": "public",
+      "decorators": [],
+      "signature": "",
+      "docstring": "",
+      "attributes": [],
+      "operations": [],
+      "bases": [],
+      "async_": false,
+      "source": "from agent import Agent\n\n\ndef handle_request(data: dict) -> str:\n    return Agent().execute(data)\n",
+      "structuralHash": "6a95fb430b4a5f1e972a",
+      "confidence": "resolved"
+    },
+    {
+      "id": "ea0d4906d883873995a1",
+      "kind": "module",
+      "name": "agent",
+      "qualifiedName": "agent",
+      "uri": "file:///mnt/data/xp-code-canvas-starter/tests/fixtures/sample_project/agent.py",
+      "root": "file:///mnt/data/xp-code-canvas-starter/tests/fixtures/sample_project",
+      "module": "agent",
+      "moduleId": "ea0d4906d883873995a1",
+      "parentId": null,
+      "range": {
+        "startLine": 0,
+        "startCharacter": 0,
+        "endLine": 0,
+        "endCharacter": 0
+      },
+      "selectionRange": {
+        "startLine": 0,
+        "startCharacter": 0,
+        "endLine": 0,
+        "endCharacter": 0
+      },
+      "version": 1,
+      "visibility": "public",
+      "decorators": [],
+      "signature": "",
+      "docstring": "",
+      "attributes": [],
+      "operations": [],
+      "bases": [],
+      "async_": false,
+      "source": "from tools import search\n\n\nclass BaseAgent:\n    def close(self) -> None:\n        return None\n\n\nclass Agent(BaseAgent):\n    def __init__(self) -> None:\n        self._count = 0\n\n    def execute(self, task: dict) -> str:\n        self._count += 1\n        return search(task)\n\n    async def plan(self, task: dict) -> dict:\n        return task\n",
+      "structuralHash": "30f9697a74a21a7dda90",
+      "confidence": "resolved"
+    },
+    {
+      "id": "add584f1271b5760eac7",
+      "kind": "module",
+      "name": "tools",
+      "qualifiedName": "tools",
+      "uri": "file:///mnt/data/xp-code-canvas-starter/tests/fixtures/sample_project/tools.py",
+      "root": "file:///mnt/data/xp-code-canvas-starter/tests/fixtures/sample_project",
+      "module": "tools",
+      "moduleId": "add584f1271b5760eac7",
+      "parentId": null,
+      "range": {
+        "startLine": 0,
+        "startCharacter": 0,
+        "endLine": 0,
+        "endCharacter": 0
+      },
+      "selectionRange": {
+        "startLine": 0,
+        "startCharacter": 0,
+        "endLine": 0,
+        "endCharacter": 0
+      },
+      "version": 1,
+      "visibility": "public",
+      "decorators": [],
+      "signature": "",
+      "docstring": "",
+      "attributes": [],
+      "operations": [],
+      "bases": [],
+      "async_": false,
+      "source": "def search(task: dict) -> str:\n    return \"ok\"\n",
+      "structuralHash": "ba3434c251ca62b93341",
+      "confidence": "resolved"
+    },
+    {
+      "id": "cd97127fb7b1dd4a340a",
+      "kind": "function",
+      "name": "handle_request",
+      "qualifiedName": "api.handle_request",
+      "uri": "file:///mnt/data/xp-code-canvas-starter/tests/fixtures/sample_project/api.py",
+      "root": "file:///mnt/data/xp-code-canvas-starter/tests/fixtures/sample_project",
+      "module": "api",
+      "moduleId": "04b15c3e27a44d059696",
+      "parentId": "04b15c3e27a44d059696",
+      "range": {
+        "startLine": 3,
+        "startCharacter": 0,
+        "endLine": 4,
+        "endCharacter": 32
+      },
+      "selectionRange": {
+        "startLine": 3,
+        "startCharacter": 0,
+        "endLine": 4,
+        "endCharacter": 32
+      },
+      "version": 1,
+      "visibility": "public",
+      "decorators": [],
+      "signature": "handle_request(data: dict) -> str",
+      "docstring": "",
+      "attributes": [],
+      "operations": [],
+      "bases": [],
+      "async_": false,
+      "source": "def handle_request(data: dict) -> str:\n    return Agent().execute(data)",
+      "structuralHash": "94f336112cfca08814a4",
+      "confidence": "resolved",
+      "stereotype": null
+    },
+    {
+      "id": "aca408ef90455657c7ff",
+      "kind": "class",
+      "name": "BaseAgent",
+      "qualifiedName": "agent.BaseAgent",
+      "uri": "file:///mnt/data/xp-code-canvas-starter/tests/fixtures/sample_project/agent.py",
+      "root": "file:///mnt/data/xp-code-canvas-starter/tests/fixtures/sample_project",
+      "module": "agent",
+      "moduleId": "ea0d4906d883873995a1",
+      "parentId": "ea0d4906d883873995a1",
+      "range": {
+        "startLine": 3,
+        "startCharacter": 0,
+        "endLine": 5,
+        "endCharacter": 19
+      },
+      "selectionRange": {
+        "startLine": 3,
+        "startCharacter": 0,
+        "endLine": 5,
+        "endCharacter": 19
+      },
+      "version": 1,
+      "visibility": "public",
+      "decorators": [],
+      "signature": "",
+      "docstring": "",
+      "attributes": [],
+      "operations": [],
+      "bases": [],
+      "async_": false,
+      "source": "class BaseAgent:\n    def close(self) -> None:\n        return None",
+      "structuralHash": "beae599947cd5e164287",
+      "confidence": "resolved",
+      "stereotype": null
+    },
+    {
+      "id": "a84daf0500ab3e46733f",
+      "kind": "method",
+      "name": "close",
+      "qualifiedName": "agent.BaseAgent.close",
+      "uri": "file:///mnt/data/xp-code-canvas-starter/tests/fixtures/sample_project/agent.py",
+      "root": "file:///mnt/data/xp-code-canvas-starter/tests/fixtures/sample_project",
+      "module": "agent",
+      "moduleId": "ea0d4906d883873995a1",
+      "parentId": "aca408ef90455657c7ff",
+      "range": {
+        "startLine": 4,
+        "startCharacter": 4,
+        "endLine": 5,
+        "endCharacter": 19
+      },
+      "selectionRange": {
+        "startLine": 4,
+        "startCharacter": 4,
+        "endLine": 5,
+        "endCharacter": 19
+      },
+      "version": 1,
+      "visibility": "public",
+      "decorators": [],
+      "signature": "close(self) -> None",
+      "docstring": "",
+      "attributes": [],
+      "operations": [],
+      "bases": [],
+      "async_": false,
+      "source": "def close(self) -> None:\n        return None",
+      "structuralHash": "ebdf1bdbfd2417baf3e5",
+      "confidence": "resolved",
+      "stereotype": null
+    },
+    {
+      "id": "e4e90442424b6e7186df",
+      "kind": "class",
+      "name": "Agent",
+      "qualifiedName": "agent.Agent",
+      "uri": "file:///mnt/data/xp-code-canvas-starter/tests/fixtures/sample_project/agent.py",
+      "root": "file:///mnt/data/xp-code-canvas-starter/tests/fixtures/sample_project",
+      "module": "agent",
+      "moduleId": "ea0d4906d883873995a1",
+      "parentId": "ea0d4906d883873995a1",
+      "range": {
+        "startLine": 8,
+        "startCharacter": 0,
+        "endLine": 17,
+        "endCharacter": 19
+      },
+      "selectionRange": {
+        "startLine": 8,
+        "startCharacter": 0,
+        "endLine": 17,
+        "endCharacter": 19
+      },
+      "version": 1,
+      "visibility": "public",
+      "decorators": [],
+      "signature": "",
+      "docstring": "",
+      "attributes": [
+        {
+          "name": "_count",
+          "type": null,
+          "visibility": "protected"
+        }
+      ],
+      "operations": [],
+      "bases": [
+        "BaseAgent"
+      ],
+      "async_": false,
+      "source": "class Agent(BaseAgent):\n    def __init__(self) -> None:\n        self._count = 0\n\n    def execute(self, task: dict) -> str:\n        self._count += 1\n        return search(task)\n\n    async def plan(self, task: dict) -> dict:\n        return task",
+      "structuralHash": "7cf62c4596b3afccf6d3",
+      "confidence": "resolved",
+      "stereotype": null
+    },
+    {
+      "id": "6f0f4a80d46afa6fb568",
+      "kind": "method",
+      "name": "__init__",
+      "qualifiedName": "agent.Agent.__init__",
+      "uri": "file:///mnt/data/xp-code-canvas-starter/tests/fixtures/sample_project/agent.py",
+      "root": "file:///mnt/data/xp-code-canvas-starter/tests/fixtures/sample_project",
+      "module": "agent",
+      "moduleId": "ea0d4906d883873995a1",
+      "parentId": "e4e90442424b6e7186df",
+      "range": {
+        "startLine": 9,
+        "startCharacter": 4,
+        "endLine": 10,
+        "endCharacter": 23
+      },
+      "selectionRange": {
+        "startLine": 9,
+        "startCharacter": 4,
+        "endLine": 10,
+        "endCharacter": 23
+      },
+      "version": 1,
+      "visibility": "public",
+      "decorators": [],
+      "signature": "__init__(self) -> None",
+      "docstring": "",
+      "attributes": [],
+      "operations": [],
+      "bases": [],
+      "async_": false,
+      "source": "def __init__(self) -> None:\n        self._count = 0",
+      "structuralHash": "da840f36d0702db5abe5",
+      "confidence": "resolved",
+      "stereotype": null
+    },
+    {
+      "id": "836478305f854026a409",
+      "kind": "method",
+      "name": "execute",
+      "qualifiedName": "agent.Agent.execute",
+      "uri": "file:///mnt/data/xp-code-canvas-starter/tests/fixtures/sample_project/agent.py",
+      "root": "file:///mnt/data/xp-code-canvas-starter/tests/fixtures/sample_project",
+      "module": "agent",
+      "moduleId": "ea0d4906d883873995a1",
+      "parentId": "e4e90442424b6e7186df",
+      "range": {
+        "startLine": 12,
+        "startCharacter": 4,
+        "endLine": 14,
+        "endCharacter": 27
+      },
+      "selectionRange": {
+        "startLine": 12,
+        "startCharacter": 4,
+        "endLine": 14,
+        "endCharacter": 27
+      },
+      "version": 1,
+      "visibility": "public",
+      "decorators": [],
+      "signature": "execute(self, task: dict) -> str",
+      "docstring": "",
+      "attributes": [],
+      "operations": [],
+      "bases": [],
+      "async_": false,
+      "source": "def execute(self, task: dict) -> str:\n        self._count += 1\n        return search(task)",
+      "structuralHash": "d3d9e31cd317fdfc9ff7",
+      "confidence": "resolved",
+      "stereotype": null
+    },
+    {
+      "id": "141590ead3a4bb76d646",
+      "kind": "method",
+      "name": "plan",
+      "qualifiedName": "agent.Agent.plan",
+      "uri": "file:///mnt/data/xp-code-canvas-starter/tests/fixtures/sample_project/agent.py",
+      "root": "file:///mnt/data/xp-code-canvas-starter/tests/fixtures/sample_project",
+      "module": "agent",
+      "moduleId": "ea0d4906d883873995a1",
+      "parentId": "e4e90442424b6e7186df",
+      "range": {
+        "startLine": 16,
+        "startCharacter": 4,
+        "endLine": 17,
+        "endCharacter": 19
+      },
+      "selectionRange": {
+        "startLine": 16,
+        "startCharacter": 4,
+        "endLine": 17,
+        "endCharacter": 19
+      },
+      "version": 1,
+      "visibility": "public",
+      "decorators": [],
+      "signature": "plan(self, task: dict) -> dict",
+      "docstring": "",
+      "attributes": [],
+      "operations": [],
+      "bases": [],
+      "async_": true,
+      "source": "async def plan(self, task: dict) -> dict:\n        return task",
+      "structuralHash": "4622828de42e9fa6e98d",
+      "confidence": "resolved",
+      "stereotype": null
+    },
+    {
+      "id": "3829f77470f67d4f1afe",
+      "kind": "function",
+      "name": "search",
+      "qualifiedName": "tools.search",
+      "uri": "file:///mnt/data/xp-code-canvas-starter/tests/fixtures/sample_project/tools.py",
+      "root": "file:///mnt/data/xp-code-canvas-starter/tests/fixtures/sample_project",
+      "module": "tools",
+      "moduleId": "add584f1271b5760eac7",
+      "parentId": "add584f1271b5760eac7",
+      "range": {
+        "startLine": 0,
+        "startCharacter": 0,
+        "endLine": 1,
+        "endCharacter": 15
+      },
+      "selectionRange": {
+        "startLine": 0,
+        "startCharacter": 0,
+        "endLine": 1,
+        "endCharacter": 15
+      },
+      "version": 1,
+      "visibility": "public",
+      "decorators": [],
+      "signature": "search(task: dict) -> str",
+      "docstring": "",
+      "attributes": [],
+      "operations": [],
+      "bases": [],
+      "async_": false,
+      "source": "def search(task: dict) -> str:\n    return \"ok\"",
+      "structuralHash": "f058f4d42e53f7e76818",
+      "confidence": "resolved",
+      "stereotype": null
+    }
+  ],
+  "edges": [
+    {
+      "id": "f4c39155041f69b6f932",
+      "source": "04b15c3e27a44d059696",
+      "target": "ea0d4906d883873995a1",
+      "kind": "imports",
+      "confidence": "resolved",
+      "evidence": [
+        {
+          "uri": "file:///mnt/data/xp-code-canvas-starter/tests/fixtures/sample_project/api.py",
+          "range": {
+            "startLine": 0,
+            "startCharacter": 0,
+            "endLine": 0,
+            "endCharacter": 23
+          },
+          "version": 1,
+          "language": "python",
+          "adapter": "ast"
+        }
+      ]
+    },
+    {
+      "id": "ec222efa354d8f4f2622",
+      "source": "cd97127fb7b1dd4a340a",
+      "target": "e4e90442424b6e7186df",
+      "kind": "creates",
+      "confidence": "resolved",
+      "evidence": [
+        {
+          "uri": "file:///mnt/data/xp-code-canvas-starter/tests/fixtures/sample_project/api.py",
+          "range": {
+            "startLine": 4,
+            "startCharacter": 11,
+            "endLine": 4,
+            "endCharacter": 18
+          },
+          "version": 1,
+          "language": "python",
+          "adapter": "ast"
+        }
+      ]
+    },
+    {
+      "id": "95e3ef2108a3a6203b4e",
+      "source": "ea0d4906d883873995a1",
+      "target": "add584f1271b5760eac7",
+      "kind": "imports",
+      "confidence": "resolved",
+      "evidence": [
+        {
+          "uri": "file:///mnt/data/xp-code-canvas-starter/tests/fixtures/sample_project/agent.py",
+          "range": {
+            "startLine": 0,
+            "startCharacter": 0,
+            "endLine": 0,
+            "endCharacter": 24
+          },
+          "version": 1,
+          "language": "python",
+          "adapter": "ast"
+        }
+      ]
+    },
+    {
+      "id": "edf724722778f66de33e",
+      "source": "e4e90442424b6e7186df",
+      "target": "aca408ef90455657c7ff",
+      "kind": "inherits",
+      "confidence": "resolved",
+      "evidence": [
+        {
+          "uri": "file:///mnt/data/xp-code-canvas-starter/tests/fixtures/sample_project/agent.py",
+          "range": {
+            "startLine": 8,
+            "startCharacter": 12,
+            "endLine": 8,
+            "endCharacter": 21
+          },
+          "version": 1,
+          "language": "python",
+          "adapter": "ast"
+        }
+      ]
+    },
+    {
+      "id": "c507828eb973cabd909b",
+      "source": "836478305f854026a409",
+      "target": "3829f77470f67d4f1afe",
+      "kind": "calls",
+      "confidence": "resolved",
+      "evidence": [
+        {
+          "uri": "file:///mnt/data/xp-code-canvas-starter/tests/fixtures/sample_project/agent.py",
+          "range": {
+            "startLine": 14,
+            "startCharacter": 15,
+            "endLine": 14,
+            "endCharacter": 27
+          },
+          "version": 1,
+          "language": "python",
+          "adapter": "ast"
+        }
+      ]
+    }
+  ],
+  "diagnostics": [],
+  "stats": {
+    "files": 3,
+    "symbols": 11,
+    "relationships": 5
+  }
+}

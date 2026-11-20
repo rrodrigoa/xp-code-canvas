@@ -1,0 +1,13 @@
+[build-system]
+requires = ["setuptools>=70"]
+build-backend = "setuptools.build_meta"
+[project]
+name = "xp-code-canvas-analysis"
+version = "0.2.0"
+requires-python = ">=3.11"
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+[tool.coverage.run]
+source = ["xp_canvas_analysis"]
+branch = true
