@@ -5,6 +5,7 @@ const elk=new ELK();
 export interface NodeSize { width:number; height:number }
 export function nodeSize(node:GraphNode,state:CanvasState, memberCounts:ReadonlyMap<string,number>=new Map(),blameShown=false):NodeSize {
   const tier=detailForNode(state.zoom,state.expanded.includes(node.id),state.selectedNode===node.id);
+  const custom=tier===3?state.nodeSizes?.[node.id]:undefined;
   // Match the visual card's bounded intrinsic width. Long Python signatures
   // get breathing room without creating unbounded horizontal lanes.
   const estimatedLabelWidth=Math.min(500,Math.max(node.name.length*7.1+76,(node.signature?.length??0)*5.5+68));
@@ -29,7 +30,7 @@ export function nodeSize(node:GraphNode,state:CanvasState, memberCounts:Readonly
   // Reserve its height so ELK and the file-focus lane do not overlap neighbors.
   const fieldInventory=node.kind==='class'&&attributes>0?Math.min(102,45+Math.ceil(Math.min(14,attributes)/4)*18):0;
   if(tier===2)return {width,height:decorations+220+fieldInventory+anatomy};
-  return {width,height:decorations+220+fieldInventory+385+anatomy};
+  return {width:custom?.width??width,height:custom?.height??decorations+220+fieldInventory+385+anatomy};
 }
 function nestedAnatomyHeight(node:GraphNode,tier:number):number {
   if(tier<2||!node.anatomy?.length)return 0;
@@ -58,6 +59,27 @@ export function focusedLaneLayout(graph:SourceGraph,state:CanvasState,counts:Rea
   if(!focus)return fallbackGrid(graph,state,counts,blamed,measured);
   const center=graph.nodes.filter(n=>isFocusNode(n,focus,graph)).sort(SOURCE_ORDER);
   if(!center.length)return fallbackGrid(graph,state,counts,blamed,measured);
+  // Escape the single-column dead end automatically on very large workspaces.
+  // File focus remains a vertical stack for small files, but large projects
+  // are wrapped into a balanced grid sorted with the focused file first.
+  if(center.length>18 || graph.nodes.length>130){
+    const order=[...graph.nodes].sort((a,b)=>Number(b.uri===focus)-Number(a.uri===focus)||SOURCE_ORDER(a,b));
+    const cols=Math.max(3,Math.min(28,Math.ceil(Math.sqrt(order.length))));
+    const rows=Math.ceil(order.length/cols);
+    const columnWidths=new Array<number>(cols).fill(0);
+    for(let i=0;i<order.length;i++){const n=order[i];columnWidths[i%cols]=Math.max(columnWidths[i%cols],(measured.get(n.id)??nodeSize(n,state,counts,blamed.has(n.id))).width);}
+    const columnXs:number[]=[];let x=50;
+    for(let c=0;c<cols;c++){columnXs[c]=x;x+=columnWidths[c]+75;}
+    const out:Record<string,XY>={};let y=70;
+    for(let row=0;row<rows;row++){let height=0;
+      for(let col=0;col<cols;col++){const n=order[row*cols+col];if(!n)break;
+        out[n.id]={x:columnXs[col],y};
+        height=Math.max(height,(measured.get(n.id)??nodeSize(n,state,counts,blamed.has(n.id))).height);
+      }
+      y+=height+66;
+    }
+    return out;
+  }
   const centerIds=new Set(center.map(n=>n.id));
   const order=new Map(center.map((n,i)=>[n.id,i]));
   const inbound=new Set<string>(),outbound=new Set<string>();

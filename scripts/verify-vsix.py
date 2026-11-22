@@ -5,7 +5,8 @@ import sys
 from pathlib import Path
 import zipfile
 
-artifact = Path('dist/xp-code-canvas-0.6.0.vsix')
+version = json.loads(Path('package.json').read_text())['version']
+artifact = Path(f'dist/xp-code-canvas-{version}.vsix')
 with zipfile.ZipFile(artifact) as archive:
     assert archive.testzip() is None, 'VSIX ZIP checksum failure'
     names = set(archive.namelist())
@@ -16,6 +17,9 @@ with zipfile.ZipFile(artifact) as archive:
         'extension/dist/webview/assets/app.css',
         'extension/dist/webview/assets/codicon.ttf',
         'extension/python/entrypoint.py',
+        'extension/media/activity-bar.svg',
+        'extension/media/structure.svg',
+        'extension/media/git-history.svg',
     }
     assert required <= names, f'Missing runtime files: {required - names}'
     for source in Path('python/src').rglob('*.py'):
@@ -27,7 +31,7 @@ with zipfile.ZipFile(artifact) as archive:
     assert not [name for name in names if name.endswith('.vsix') or any(
         name.startswith(f'extension/{prefix}') for prefix in forbidden)], 'Local test artifacts packaged'
     manifest = json.loads(archive.read('extension/package.json'))
-    assert (manifest['publisher'], manifest['name'], manifest['version']) == ('xp-libs', 'xp-code-canvas', '0.6.0')
+    assert (manifest['publisher'], manifest['name'], manifest['version']) == ('xp-libs', 'xp-code-canvas', version)
     if len(sys.argv)>1:
         installed=Path(sys.argv[1])
         for name in names:

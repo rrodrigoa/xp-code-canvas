@@ -17,6 +17,9 @@ describe('Installed V6 against real Flask history and source',()=>{
   await driver.wait(async()=>(await new EditorView().getOpenEditorTitles()).includes('Python UML Canvas'),30000);
   view=new WebView();await view.switchToFrame(30000);
   await driver.wait(async()=>(await driver.findElements(By.css('.uml-node'))).length>0,90000,'Flask graph must render');
+  await view.switchBack();
+  await new Workbench().executeCommand('Notifications: Clear All Notifications');
+  await view.switchToFrame(15000);
  });
  after(async()=>{if(view)await view.switchBack();});
  it('shows real commit subjects, authors, branch topology and selected baseline',async()=>{
@@ -92,5 +95,28 @@ describe('Installed V6 against real Flask history and source',()=>{
   await new Workbench().executeCommand('Python UML Canvas: Return to UML Canvas');
   await driver.wait(async()=>(await new EditorView().getOpenEditorTitles()).includes('Python UML Canvas'),15000,'Return to the real-source canvas');
   await view.switchToFrame(15000);
+ });
+ it('uses the native Activity Bar trees and their Spread and History commands',async()=>{
+  await view.switchBack();
+  const activity=By.css('.activitybar [aria-label^="XP Code Canvas"]');
+  await driver.wait(async()=>(await driver.findElements(activity)).length>0,15000,'Dedicated Activity Bar icon must exist');
+  await driver.findElement(activity).click();
+  const structure=By.xpath('//*[contains(@class,"pane-header")][.//*[normalize-space()="Python Structure"]]');
+  await driver.wait(async()=>(await driver.findElements(structure)).length>0,15000,'Native Python Structure view appears');
+  await driver.wait(async()=>(await driver.findElements(By.css('.sidebar .monaco-list-row'))).length>0,15000,'Real Python modules populate native tree');
+  const history=By.xpath('//*[contains(@class,"pane-header")][.//*[normalize-space()="Git History"]]');
+  await driver.findElement(history).click();
+  await driver.wait(async()=>(await driver.findElement(By.css('.sidebar')).getText()).includes(git('log','-1','--format=%s')),15000,'Native history contains actual HEAD subject');
+  await screenshot('v61-native-sidebar');
+  await new Workbench().executeCommand('Python UML Canvas: Spread and Recover UML Layout');
+  await view.switchToFrame(15000);
+  await driver.wait(async()=>(await find('[aria-label="Choose graph layout"]').getAttribute('value'))==='spread',15000);
+  assert.equal(await find('[aria-label="Toggle minimap"]').getAttribute('aria-pressed'),'true');
+  await screenshot('v61-spread');
+  await view.switchBack();
+  await new Workbench().executeCommand('Python UML Canvas: Show Git History in UML Canvas');
+  await view.switchToFrame(15000);
+  await driver.wait(async()=>(await driver.findElements(By.css('.git-commit-row'))).length===100,15000);
+  assert.ok((await find('.git-commit-row').getText()).includes(git('log','-1','--format=%s')));
  });
 });

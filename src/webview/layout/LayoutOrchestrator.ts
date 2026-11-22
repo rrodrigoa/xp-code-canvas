@@ -3,7 +3,7 @@
 import type {CanvasState, GraphNode, SourceGraph, XY} from '../../shared/types';
 import {calculateLayout, nodeSize, type NodeSize} from '../elkLayout';
 
-export type LayoutMode='architecture'|'file'|'investigation'|'change';
+export type LayoutMode='architecture'|'file'|'investigation'|'change'|'spread';
 export type NodeDimensions=ReadonlyMap<string,NodeSize>;
 export interface LayoutBox extends XY {id:string;width:number;height:number;pinned?:boolean}
 
@@ -42,6 +42,31 @@ function threeLanes(graph:SourceGraph,center:GraphNode[], size:(n:GraphNode)=>No
     ...placeColumn(others,centerX+centerWidth+rightWidth+420,size,80,45),
   };
 }
+/** Balanced 2-D packing with source-order stability. A dense workspace never becomes a 500-card column.
+ * Grouped ordering keeps related file symbols neighbors, and rows use measured card heights.
+ * No relationships or source coordinates are modified. */
+export function spreadLayout(graph:SourceGraph,size:(node:GraphNode)=>NodeSize,focusedFile?:string|null):Record<string,XY> {
+  const sorted=[...graph.nodes].sort((a,b)=>
+    (Number(b.uri===focusedFile)-Number(a.uri===focusedFile))||sourceOrder(a,b));
+  if(!sorted.length)return {};
+  // For ~584 symbols this produces ~23 columns and ~26 rows instead of a >100kpx lane.
+  const columns=Math.max(2,Math.min(30,Math.ceil(Math.sqrt(sorted.length))));
+  const gapX=88,gapY=76;
+  const widths=Array.from({length:columns},()=>0);
+  const rows:GraphNode[][]=[];
+  for(let i=0;i<sorted.length;i+=columns)rows.push(sorted.slice(i,i+columns));
+  for(const row of rows)row.forEach((n,index)=>{widths[index]=Math.max(widths[index],size(n).width);});
+  const xs:number[]=[];let x=60;
+  for(let c=0;c<columns;c++){xs[c]=x;x+=widths[c]+gapX;}
+  const output:Record<string,XY>={};let y=64;
+  for(const row of rows){
+    let height=0;
+    row.forEach((node,index)=>{output[node.id]={x:xs[index],y};height=Math.max(height,size(node).height);});
+    y+=height+gapY;
+  }
+  return output;
+}
+
 export function investigationLayout(graph:SourceGraph,focusId:string|undefined,size:(n:GraphNode)=>NodeSize):Record<string,XY>|undefined {
   const focus=graph.nodes.find(n=>n.id===focusId);
   if(!focus)return;
@@ -108,7 +133,8 @@ export async function orchestrateLayout(
 ):Promise<Record<string,XY>> {
   const mode=layoutModeFor(state),size=(n:GraphNode)=>visualBounds(n,state,measured,counts,blamed);
   let positions:Record<string,XY>;
-  if(mode==='investigation')positions=investigationLayout(graph,state.selectedNode??undefined,size)??await calculateLayout(graph,state,counts,blamed,measured);
+  if(mode==='spread')positions=spreadLayout(graph,size,state.focusedFile);
+  else if(mode==='investigation')positions=investigationLayout(graph,state.selectedNode??undefined,size)??await calculateLayout(graph,state,counts,blamed,measured);
   else if(mode==='change')positions=changeLayout(graph,size);
   else positions=await calculateLayout(graph,{...state,focusedFile:mode==='file'?state.focusedFile:null},counts,blamed,measured);
   const remembered=state.layoutPositions?.[mode]??{};

@@ -32,3 +32,5 @@ Screenshots are runtime evidence, not approved regression baselines:
 Machine-readable service evidence is retained in `extension-results.json`. Passing this bounded Flask matrix does not certify every Git topology, encoding, filesystem or workspace arrangement. Physical Windows DPI, screen readers, Linux installation and the other manual gates remain listed in the main validation report.
 
 The run found and corrected Windows Python pipe encoding, live/Git source-root casing, exact-case symbol ranking, search focus before asynchronous layout completion, and overlapping Git mode/timeline controls. These fixes preserve the existing source-backed graph and non-AI capability set.
+
+V6.1 rerun (2026-11-20): **8 extension-host and 4 installed desktop tests passed**. New `v61-*` screenshots retain actual Activity Bar, recovery, history and blame evidence. The final runner checks a clean clone and normalizes inherited Git launcher configuration.

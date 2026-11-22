@@ -35,3 +35,19 @@
 @media(prefers-contrast:more){.uml-node,.uml-node.selected{border-width:2px;box-shadow:none}.uml-node .node-actions{opacity:1}.uml-node .handle{opacity:1;width:9px;height:9px}}
 
 .uml-node .handle.member-port{width:9px;height:9px;border-width:2px;border-color:var(--xp-accent);background:var(--xp-surface-1)}
+
+/* V6.1 source-viewport resize: card stays source-backed and read-only. */
+.uml-node.uml-expanded{display:flex;flex-direction:column;min-height:260px;max-width:1400px!important}
+.uml-node.uml-expanded .uml-heading{flex:0 0 auto}
+.uml-node.uml-expanded .uml-source-context{flex:0 1 auto;min-height:0;max-height:40%;overflow:auto;overscroll-behavior:contain}
+.uml-node.uml-expanded .uml-source{display:flex;flex-direction:column;flex:1 1 0;min-height:110px}
+.uml-node.uml-expanded .source-preview{flex:1 1 auto;min-height:75px;max-height:none;overflow:auto;user-select:text}
+.uml-node.uml-expanded .uml-footer{flex:0 0 auto}
+.uml-node.uml-expanded .source-code-row code{user-select:text;white-space:pre}
+.uml-node .xp-source-resize{width:19px;height:19px;border:1px solid var(--xp-border);background:var(--xp-surface-1);border-radius:5px;display:grid;place-items:center;color:var(--xp-accent);cursor:nwse-resize;z-index:30}
+.uml-node .xp-source-resize .codicon{font-size:12px;transform:rotate(-45deg)}
+.uml-node .xp-source-resize:hover{background:var(--xp-surface-hover);outline:1px solid var(--xp-accent)}
+.uml-node .xp-source-resize:focus-visible{outline:2px solid var(--xp-accent)}
+
+.uml-node .xp-source-resize{opacity:.7;transition:opacity .15s}
+.uml-node:hover .xp-source-resize,.uml-node:focus-within .xp-source-resize{opacity:1}

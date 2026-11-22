@@ -17,18 +17,23 @@ const EMPTY: SourceGraph = { schema: 1, nodes: [], edges: [], diagnostics: [] };
 export class CanvasController implements vscode.Disposable {
   private panel?: vscode.WebviewPanel;
   private graph: SourceGraph = EMPTY;
+  private readonly graphEmitter=new vscode.EventEmitter<SourceGraph>();
+  readonly onDidGraph=this.graphEmitter.event;
+  get graphSnapshot(): SourceGraph { return this.graph; }
   private readonly session: ViewSessionService;
   private readonly git: GitCompareService;
   private readonly gitHistory = new GitHistoryService();
   private readonly blame = new GitBlameService();
   private get state():CanvasState {return this.session.value;}
   private isReady = false;
+  private pendingActions:import('../../shared/types').ToWebview[]=[];
   private readonly index: IndexCoordinator;
   private readonly previews = new SourcePreviewService();
   private readonly navigator = new NativeEditorNavigator();
   private enriched = new Map<string,import('../../shared/types').GraphEdge[]>();
   private hadEnrichedOverlay = false;
   private activeGitBaseline: string | null = null;
+  private refreshPromise?:Promise<void>;
   private readonly subscriptions: vscode.Disposable[] = [];
   private readonly status = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
 
@@ -43,6 +48,7 @@ export class CanvasController implements vscode.Disposable {
     this.status.show();
     this.subscriptions.push(this.status, this.index, this.index.onGraph((graph,delta) => {
       this.graph = graph;
+      this.graphEmitter.fire(graph);
       this.enriched.clear();
       this.status.text = `$(type-hierarchy) UML: ${graph.nodes.length} symbols`;
       if(delta && !this.activeGitBaseline && !this.hadEnrichedOverlay && useDelta(delta,graph)) this.send({type:'graphDelta',delta});
@@ -68,6 +74,12 @@ export class CanvasController implements vscode.Disposable {
   registerCommands(): vscode.Disposable[] {
     const commands: [string, (...args: any[]) => unknown][] = [
       ['xpCodeCanvas.open', () => this.open()],
+      ['xpCodeCanvas.spreadGraph', () => this.spreadGraph()],
+      ['xpCodeCanvas.focusSymbol', (item: string | import('../../shared/types').GraphNode) => this.focusSymbol(typeof item==='string'?item:item?.id)],
+      ['xpCodeCanvas.showHistory', () => this.showHistory()],
+      ['xpCodeCanvas.showChanges', () => this.showChanges()],
+      ['xpCodeCanvas.showBlame', () => this.showBlame()],
+      ['xpCodeCanvas.compareCommit', (item: string | import('../../shared/gitHistory').GitCommit) => this.compareCommit(typeof item==='string'?item:item?.hash)],
       ['xpCodeCanvas.focusCurrentFile', () => this.focusActive()],
       ['xpCodeCanvas.focusFile', (uri: vscode.Uri) => this.focusFile(uri)],
       ['xpCodeCanvas.returnToCanvas', () => this.returnToCanvas()],
@@ -96,7 +108,7 @@ export class CanvasController implements vscode.Disposable {
       localResourceRoots: [vscode.Uri.joinPath(this.context.extensionUri, 'dist', 'webview')],
     });
     this.attach(panel);
-    void this.refresh();
+    await this.refresh();
   }
 
   attach(panel: vscode.WebviewPanel): void {
@@ -109,8 +121,8 @@ export class CanvasController implements vscode.Disposable {
     const messageSub = panel.webview.onDidReceiveMessage(async (untrusted: unknown) => {
       try {
         const message = fromWebviewSchema.parse(untrusted);
-        if (message.type === 'ready') { this.isReady = true; this.send({ type: 'graph', graph: this.graph, state: this.state }); }
-        if (message.type === 'openNode' && typeof message.nodeId === 'string') await this.openNode(message.nodeId);
+        if (message.type === 'ready') { this.isReady = true; this.send({ type: 'graph', graph: this.graph, state: this.state }); for(const action of this.pendingActions.splice(0))this.send(action); }
+        if (message.type === 'openNode' && typeof message.nodeId === 'string') await this.openNode(message.nodeId,message.cursor);
         if (message.type === 'selectNode' && typeof message.nodeId === 'string') void this.resolveSelected(message.nodeId);
         if (message.type === 'focusFile' && typeof message.uri === 'string') await this.focusFile(vscode.Uri.parse(message.uri));
         if (message.type === 'state') { this.setState(message.state); this.send({type:'stateAck',revision:this.session.stateRevision}); }
@@ -152,19 +164,27 @@ export class CanvasController implements vscode.Disposable {
     });
   }
 
+  private sendOrQueue(message:ToWebview):void {
+    if(!this.send(message))this.pendingActions.push(message);
+  }
   private send(message: ToWebview): boolean {
     if (!this.panel || !this.isReady) return false;
     void this.panel.webview.postMessage(message);
     return true;
   }
 
-  async refresh(): Promise<void> {
-    this.status.text = '$(sync~spin) Indexing Python…';
+  refresh(): Promise<void> {
+    if(!this.refreshPromise)this.refreshPromise=this.refreshNow().finally(()=>{this.refreshPromise=undefined;});
+    return this.refreshPromise;
+  }
+  private async refreshNow(): Promise<void> {
+    this.status.text = '$(sync~spin) Indexing Pythonâ€¦';
     try {
       await this.index.initialize((done, total) => {
-        this.status.text = `$(sync~spin) Indexing Python… ${done}/${total}`;
+        this.status.text = `$(sync~spin) Indexing Pythonâ€¦ ${done}/${total}`;
       });
       this.graph = this.index.graph;
+      this.graphEmitter.fire(this.graph);
       this.status.text = `$(type-hierarchy) UML: ${this.graph.nodes.length} symbols`;
       this.send({type:'graph',graph:this.graph,state:this.state});
     } catch (error) {
@@ -191,11 +211,48 @@ export class CanvasController implements vscode.Disposable {
     this.send({ type: 'focus', file: uri.toString() });
   }
 
-  async openNode(id: string): Promise<void> {
+  /** Explicit escape from oversized file columns: clears stale manual positioning and fits the reflowed spread. */
+  async spreadGraph():Promise<void> {
+    if(!this.panel)await this.open();
+    this.panel?.reveal(this.panel.viewColumn);
+    this.sendOrQueue({type:'action',action:'spread'});
+  }
+  async focusSymbol(id:string|undefined):Promise<void> {
+    if(!id)return;
+    const node=this.graph.nodes.find(n=>n.id===id);
+    if(!node)return;
+    this.setState({...this.state,selectedNode:id,focusedFile:node.uri,altitude:'code',layoutMode:'investigation'});
+    if(!this.panel)await this.open();
+    this.panel?.reveal(this.panel.viewColumn);
+    this.sendOrQueue({type:'revealSymbol',file:node.uri,nodeId:id});
+  }
+  async showHistory():Promise<void> {
+    if(!this.panel)await this.open();
+    this.panel?.reveal(this.panel.viewColumn);
+    this.sendOrQueue({type:'action',action:'history'});
+  }
+  async showChanges():Promise<void> {
+    if(!this.panel)await this.open();
+    await this.gitDiff('HEAD');
+  }
+  async showBlame():Promise<void> {
+    const id=this.state.selectedNode??this.navigator.fromCursor(this.graph)?.id;
+    const node=id?this.graph.nodes.find(n=>n.id===id):undefined;
+    if(!node){void vscode.window.showInformationMessage('Select a Python symbol on the canvas or place the editor cursor in a Python function to inspect blame.');return;}
+    await this.focusSymbol(node.id);
+    const result=await this.blame.get(node);
+    this.sendOrQueue({type:'gitBlame',result});
+  }
+  async compareCommit(hash:string|undefined):Promise<void> {
+    if(!hash||!/^[a-f0-9]{40,64}$/i.test(hash))return;
+    if(!this.panel)await this.open();
+    await this.gitDiff(hash);
+  }
+  async openNode(id: string,cursor?:import('../../shared/types').SourceCursor): Promise<void> {
     const node = this.graph.nodes.find(n => n.id === id);
     if (!node) { void vscode.window.showWarningMessage('UML symbol is no longer available. Refresh the graph.'); return; }
     this.setState({ ...this.state, selectedNode: id, focusedFile: node.uri });
-    await this.navigator.open(node, this.panel?.viewColumn ?? vscode.ViewColumn.Active);
+    await this.navigator.open(node, this.panel?.viewColumn ?? vscode.ViewColumn.Active,cursor);
   }
 
   async returnToCanvas(): Promise<void> {
@@ -226,12 +283,12 @@ export class CanvasController implements vscode.Disposable {
   }
 
   private async gitDiff(baseline: string): Promise<void> {
-    this.send({ type: 'status', message: `Comparing with ${baseline}…` });
+    this.send({ type: 'status', message: `Comparing with ${baseline}â€¦` });
     const base=this.graph;
     const overlay=await this.git.compare(baseline,base);
     if(base!==this.graph)throw Error('Live graph changed during Git comparison; retry against the latest source');
     this.activeGitBaseline=baseline;
-    this.send({type:'diff',graph:overlay,baseline});
+    this.sendOrQueue({type:'diff',graph:overlay,baseline});
   }
 
   private showError(error: unknown): void {
@@ -243,5 +300,6 @@ export class CanvasController implements vscode.Disposable {
   dispose(): void {
     this.panel?.dispose();
     this.subscriptions.forEach(d => d.dispose());
+    this.graphEmitter.dispose();
   }
 }

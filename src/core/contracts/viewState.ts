@@ -12,14 +12,16 @@ export const viewStateSchema=z.object({
   edgeKinds:z.array(edge).max(7),trace:z.enum(['all','incoming','outgoing']),traceDepth:z.number().int().min(1).max(20),
   history:z.array(z.string().max(256)).max(500),historyIndex:z.number().int().min(-1).max(500), explodeMethods:z.boolean(),
   altitudeViewports:z.record(viewport).optional(),
-  layoutMode:z.enum(['architecture','file','investigation','change']).optional(),
+  layoutMode:z.enum(['architecture','file','investigation','change','spread']).optional(),
+  nodeSizes:z.record(z.object({width:z.number().finite().min(340).max(1400),height:z.number().finite().min(260).max(1600)})).optional(),
   layoutPositions:z.record(z.record(xy)).optional(),
   lens:z.enum(['uml','sankey']).optional(),flowKind:z.enum(['calls','imports','references','creates']).optional(),
 }).strict();
 export function validateViewState(value:unknown):CanvasState {
   const input=viewStateSchema.parse(value);
   if(Object.keys(input.pinned).length>20000 || Object.keys(input.manualPositions).length>20000)throw Error('Too many stored node positions');
-  if(Object.entries(input.layoutPositions??{}).some(([key,value])=>!['architecture','file','investigation','change'].includes(key)||Object.keys(value).length>12000))throw Error('Invalid layout snapshots');
+  if(Object.entries(input.layoutPositions??{}).some(([key,value])=>!['architecture','file','investigation','change','spread'].includes(key)||Object.keys(value).length>12000))throw Error('Invalid layout snapshots');
+  if(Object.keys(input.nodeSizes??{}).length>3000)throw Error('Too many saved preview dimensions');
   return input as CanvasState;
 }
 export function recoverViewState(value:unknown):CanvasState {
@@ -28,7 +30,7 @@ export function recoverViewState(value:unknown):CanvasState {
 }
 export const fromWebviewSchema=z.discriminatedUnion('type',[
   z.object({type:z.literal('ready')}),
-  z.object({type:z.literal('openNode'),nodeId:z.string().max(256)}),
+  z.object({type:z.literal('openNode'),nodeId:z.string().max(256),cursor:z.object({line:z.number().int().min(0).max(10000000),character:z.number().int().min(0).max(1000000)}).optional()}),
   z.object({type:z.literal('selectNode'),nodeId:z.string().max(256)}),
   z.object({type:z.literal('focusFile'),uri:z.string().max(4096)}),
   z.object({type:z.literal('state'),state:viewStateSchema}),

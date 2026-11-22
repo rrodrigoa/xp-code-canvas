@@ -3,10 +3,13 @@
   "displayName": "XP Python UML Canvas",
   "description": "Production-oriented Python UML canvas: measured stable layouts, contextual navigation, Git attribution, Sankey flow, accessible and responsive views",
   "publisher": "xp-libs",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "license": "MIT",
   "private": true,
-  "repository": { "type": "git", "url": "https://github.com/rrodrigoa/xp-code-canvas.git" },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rrodrigoa/xp-code-canvas.git"
+  },
   "engines": {
     "vscode": "^1.96.0"
   },
@@ -27,7 +30,9 @@
     "onCommand:xpCodeCanvas.focusCurrentFile",
     "onCommand:xpCodeCanvas.focusFile",
     "onCommand:xpCodeCanvas.returnToCanvas",
-    "onWebviewPanel:xpCodeCanvas.canvas"
+    "onWebviewPanel:xpCodeCanvas.canvas",
+    "onView:xpCodeCanvas.structure",
+    "onView:xpCodeCanvas.history"
   ],
   "icon": "media/icon.png",
   "contributes": {
@@ -81,6 +86,48 @@
         "command": "xpCodeCanvas.toggleExplodedMethods",
         "title": "Expand or Collapse UML Method Nodes",
         "category": "Python UML Canvas"
+      },
+      {
+        "command": "xpCodeCanvas.spreadGraph",
+        "title": "Spread and Recover UML Layout",
+        "category": "Python UML Canvas",
+        "icon": "$(layout)"
+      },
+      {
+        "command": "xpCodeCanvas.focusSymbol",
+        "title": "Focus Symbol in UML Canvas",
+        "category": "Python UML Canvas",
+        "icon": "$(symbol-method)"
+      },
+      {
+        "command": "xpCodeCanvas.showHistory",
+        "title": "Show Git History in UML Canvas",
+        "category": "Python UML Canvas",
+        "icon": "$(git-commit)"
+      },
+      {
+        "command": "xpCodeCanvas.showChanges",
+        "title": "Show Current Git Changes in UML Canvas",
+        "category": "Python UML Canvas",
+        "icon": "$(git-compare)"
+      },
+      {
+        "command": "xpCodeCanvas.compareCommit",
+        "title": "Compare Commit in UML Canvas",
+        "category": "Python UML Canvas",
+        "icon": "$(git-compare)"
+      },
+      {
+        "command": "xpCodeCanvas.refreshSidebar",
+        "title": "Refresh Python Structure and Git History",
+        "category": "Python UML Canvas",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "xpCodeCanvas.showBlame",
+        "title": "Show Git Blame for Selected Symbol",
+        "category": "Python UML Canvas",
+        "icon": "$(git-commit)"
       }
     ],
     "menus": {
@@ -96,6 +143,50 @@
           "command": "xpCodeCanvas.returnToCanvas",
           "when": "editorLangId == python && xpCodeCanvas.hasCanvas",
           "group": "navigation@10"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "xpCodeCanvas.open",
+          "when": "view == xpCodeCanvas.structure",
+          "group": "navigation@1"
+        },
+        {
+          "command": "xpCodeCanvas.spreadGraph",
+          "when": "view == xpCodeCanvas.structure",
+          "group": "navigation@2"
+        },
+        {
+          "command": "xpCodeCanvas.refreshSidebar",
+          "when": "view == xpCodeCanvas.structure || view == xpCodeCanvas.history",
+          "group": "navigation@3"
+        },
+        {
+          "command": "xpCodeCanvas.showHistory",
+          "when": "view == xpCodeCanvas.history",
+          "group": "navigation@4"
+        },
+        {
+          "command": "xpCodeCanvas.showChanges",
+          "when": "view == xpCodeCanvas.history",
+          "group": "navigation@5"
+        },
+        {
+          "command": "xpCodeCanvas.showBlame",
+          "when": "view == xpCodeCanvas.structure",
+          "group": "navigation@6"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "xpCodeCanvas.focusSymbol",
+          "when": "view == xpCodeCanvas.structure && (viewItem == xpCanvasSymbol || viewItem == xpCanvasModule)",
+          "group": "inline"
+        },
+        {
+          "command": "xpCodeCanvas.compareCommit",
+          "when": "view == xpCodeCanvas.history && viewItem == xpCanvasCommit",
+          "group": "inline"
         }
       ]
     },
@@ -171,7 +262,42 @@
           "default": "RIGHT"
         }
       }
-    }
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "xpCodeCanvas-sidebar",
+          "title": "XP Code Canvas",
+          "icon": "media/activity-bar.svg"
+        }
+      ]
+    },
+    "views": {
+      "xpCodeCanvas-sidebar": [
+        {
+          "id": "xpCodeCanvas.structure",
+          "name": "Python Structure",
+          "icon": "media/structure.svg",
+          "visibility": "visible"
+        },
+        {
+          "id": "xpCodeCanvas.history",
+          "name": "Git History",
+          "icon": "media/git-history.svg",
+          "visibility": "collapsed"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "xpCodeCanvas.structure",
+        "contents": "Explore Python source as connected UML.\n[Open UML Canvas](command:xpCodeCanvas.open)\n[Spread Graph](command:xpCodeCanvas.spreadGraph)\nOpen a Python folder to index its symbols."
+      },
+      {
+        "view": "xpCodeCanvas.history",
+        "contents": "Open a Git repository to explore source history.\n[Refresh Git History](command:xpCodeCanvas.refreshSidebar)"
+      }
+    ]
   },
   "scripts": {
     "dev:web": "vite --host 127.0.0.1 --port 5175 --strictPort --config vite.config.ts",
@@ -191,13 +317,15 @@
     "test:extension": "npm run build && vscode-test",
     "test:desktop-e2e": "extest setup-and-run --config extester.config.json",
     "test:real-repo": "node scripts/test-real-repository.mjs",
-    "package": "npm run build && vsce package --out dist/xp-code-canvas-0.6.0.vsix",
+    "package": "npm run build && vsce package --out dist/xp-code-canvas-0.6.1.vsix",
     "verify:core": "npm run verify:fast && npm run test:canvas-e2e && npm run test:extension && npm run package",
     "verify": "npm run verify:core && npm run test:desktop-e2e",
     "test:contracts": "vitest run tests/unit/graphDelta.test.ts tests/unit/gitTree.test.ts",
-    "verify:fast": "npm run typecheck && npm run lint && npm run test:python && npm run test:visual-smoke && npm run test:unit && npm run test:visual-v6",
+    "verify:fast": "npm run typecheck && npm run lint && npm run test:python && npm run test:visual-smoke && npm run test:unit && npm run test:visual-v6 && npm run test:feature-smoke",
     "test:visual-smoke": "node scripts/visual-smoke.cjs",
-    "test:visual-v6": "node scripts/v6-visual-smoke.cjs"
+    "test:visual-v6": "node scripts/v6-visual-smoke.cjs",
+    "test:feature-smoke": "node scripts/feature-smoke.cjs",
+    "test:package": "python scripts/verify-vsix.py"
   },
   "dependencies": {
     "@vscode/codicons": "^0.0.40",

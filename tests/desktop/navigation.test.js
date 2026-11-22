@@ -16,7 +16,7 @@ describe('XP Code Canvas packaged desktop smoke', () => {
     await view.switchToFrame(30000);
     try {
       await driver.wait(async () => (await driver.findElements(By.css('.uml-node'))).length>0,30000,'Analyzed cards must render');
-      for(const mode of ['architecture','file','investigation','change']) {
+      for(const mode of ['architecture','file','investigation','change','spread']) {
         const select=await driver.findElement(By.css('[aria-label="Choose graph layout"]'));
         await select.findElement(By.css(`option[value="${mode}"]`)).click();
         await driver.wait(async () => (await driver.findElement(By.css('.graph-context-meta')).getText()).toLowerCase().includes(`${mode} layout`),10000);

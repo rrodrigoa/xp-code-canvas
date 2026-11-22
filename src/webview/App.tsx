@@ -70,6 +70,7 @@ function CanvasBody(){
   const previousAltitude=useRef(state.altitude);
   const previousFocus=useRef<string|null>(state.focusedFile);
   const fitLayoutRef=useRef(false);
+  const spreadFitRef=useRef(false);
   const searchRevealRef=useRef<string|null>(null);
   const projected=useMemo(()=>visibleGraph(graph,state),[graph,state.altitude,state.explodeMethods]);
   // Edges are a visual projection: re-bundle on zoom without relaying out the nodes.
@@ -121,7 +122,24 @@ function CanvasBody(){
     if(data.type==='sourcePreview')useCanvasStore.getState().acceptPreview(data.nodeId,data.contentHash,data.source,data.stale,data.error);
     if(data.type==='stateAck')useCanvasStore.getState().acknowledgeState(data.revision);
     if(data.type==='focus'){focus(data.file,data.node);if(data.node)setInspecting(true);}
+    if(data.type==='revealSymbol'){
+      const store=useCanvasStore.getState(),symbol=store.graph.nodes.find(n=>n.id===data.nodeId);
+      searchRevealRef.current=data.nodeId;
+      store.select(data.nodeId);
+      store.change({focusedFile:data.file,altitude:'code',layoutMode:'investigation',trace:'all',
+        explodeMethods:store.state.explodeMethods||symbol?.kind==='method'||symbol?.kind==='property'});
+      setLayoutEpoch(v=>v+1);setInspecting(true);
+    }
     if(data.type==='action'){
+      if(data.action==='spread'){
+        spreadFitRef.current=true;fitLayoutRef.current=false;setSearch('');setShowMinimap(true);
+        useCanvasStore.getState().change({layoutMode:'spread',trace:'all',pinned:{},manualPositions:{},layoutPositions:{}});
+        setLayoutEpoch(v=>v+1);
+      }else if(data.action==='history'){
+        setGitOpen(true);setGitCommands(false);setGitLoading(true);setGitError('');
+        request({type:'getGitHistory',limit:100});
+      }
+
       if(data.action==='align'){
         const store=useCanvasStore.getState();store.change(realignFile(store.graph,store.state));setLayoutEpoch(v=>v+1);
       }else if(data.action==='reset'){
@@ -175,6 +193,13 @@ function CanvasBody(){
         selected:n.id===state.selectedNode,
       })));
       setLayoutBusy(false);
+      if(spreadFitRef.current&&projected.nodes.length){
+        spreadFitRef.current=false;previousFocus.current=state.focusedFile;
+        const first=Object.entries(positions).sort((a,b)=>a[1].y-b[1].y||a[1].x-b[1].x).slice(0,6).map(([id])=>({id}));
+        requestAnimationFrame(()=>requestAnimationFrame(()=>{
+          if(!cancelled)void flow.fitView({nodes:first,padding:.2,minZoom:.7,maxZoom:1.1,duration:300});
+        }));
+      }
       const reveal=searchRevealRef.current;
       if(reveal&&projected.nodes.some(n=>n.id===reveal)){
         searchRevealRef.current=null;
@@ -228,7 +253,9 @@ function CanvasBody(){
   /** React Flow reports DOM measurements after node expansion. Correct only collisions;
    * never reflow the whole graph when someone scrolls or changes semantic zoom. */
   const handleNodeChanges=useCallback((changes:NodeChange<UmlFlowNode>[])=>{
-    onNodesChange(changes);
+    // The source card owns its size. Do not leave explicit wrapper dimensions
+    // behind when React Flow's resize control changes a preview that later collapses.
+    onNodesChange(changes.map(c=>c.type==='dimensions'?{...c,setAttributes:false}:c));
     let resized=false;
     for(const item of changes){
       if(item.type==='dimensions'&&item.dimensions){
@@ -280,7 +307,7 @@ function CanvasBody(){
       .map(e=>{
         const start=byPosition.get(e.source),end=byPosition.get(e.target);
         if(!start||!end)return null;
-        return {id:e.id,text:`${e.kind} ×${e.count??1}`,
+        return {id:e.id,text:`${e.kind} Ã—${e.count??1}`,
           start:{x:start.position.x+(start.measured?.width??320),y:start.position.y+(start.measured?.height??160)*portOffset(e.kind)/100},
           end:{x:end.position.x,y:end.position.y+(end.measured?.height??160)*portOffset(e.kind)/100},
           priority:e.id===selectedEdgeId?3:e.id===hoveredEdge?2:1};
@@ -318,7 +345,13 @@ function CanvasBody(){
   const handleReset=()=>{change({pinned:{},manualPositions:{},layoutPositions:{}});setLayoutEpoch(v=>v+1);};
   const handleReflow=()=>setLayoutEpoch(v=>v+1);
   const selectFile=(uri:string)=>{change({focusedFile:uri||null,selectedNode:null,layoutMode:uri?'file':'architecture'});setInspecting(false);setLayoutEpoch(v=>v+1);};
-  const changeLayout=(layoutMode:LayoutMode)=>{fitLayoutRef.current=true;change({layoutMode});setLayoutEpoch(v=>v+1);};
+  const changeLayout=(layoutMode:LayoutMode)=>{
+    if(layoutMode==='spread'){
+      spreadFitRef.current=true;fitLayoutRef.current=false;setSearch('');setShowMinimap(true);
+      change({layoutMode,trace:'all',pinned:{},manualPositions:{},layoutPositions:{}});
+    }else{fitLayoutRef.current=true;change({layoutMode});}
+    setLayoutEpoch(v=>v+1);
+  };
   const explore=(direction:'incoming'|'outgoing')=>{change({trace:direction});setInspecting(false);};
   const loadGit=()=>{setGitLoading(true);setGitError('');request({type:'getGitHistory',limit:100});};
   const toggleGit=()=>{setGitCommands(v=>!v);setShowHelp(false);setShowFilters(false);};
@@ -389,7 +422,7 @@ function CanvasBody(){
         <span><i className="key-mark role-callable"/> Callable</span><span><i className="key-mark role-data"/> Data</span>
         <span className="semantic-key-note">Git changes use separate markers</span>
       </div>}
-      <div className="wheel-hint" aria-label="Mouse controls">Scroll to pan <span>·</span> Ctrl + scroll to zoom</div>
+      <div className="wheel-hint" aria-label="Mouse controls">Scroll to pan <span>Â·</span> Ctrl + scroll to zoom</div>
       {graphIsEmpty(graph.nodes.length)&&<div className="empty-overlay"><div className="empty-icon"><i className="codicon codicon-type-hierarchy"/></div><h2>Explore code as a system</h2><p>Open a Python workspace to see classes, functions, and source-backed relationships. Keep editing in the standard VS Code editor.</p><button className="button-primary" onClick={()=>request({type:'command',command:'reload'})}>Index workspace</button></div>}
       {showHelp&&<div className="floating-popover help-dialog" role="dialog" aria-label="Canvas interaction guide"><button className="icon-button close-float" aria-label="Close help" onClick={()=>setShowHelp(false)}><i className="codicon codicon-close"/></button><span className="drawer-eyebrow">CONTROLS</span><h2>Work naturally</h2>
         <div className="shortcut-row"><span>Scroll</span><kbd>Wheel</kbd><small>Pan vertically; scroll inside source previews</small></div>
@@ -403,7 +436,7 @@ function CanvasBody(){
       {gitCommands&&<GitCommandStrip selectedName={selected?.name} mode={gitMode} onMode={activateGitMode} onClose={()=>setGitCommands(false)} hasBaseline={Boolean(baseline)}/>}
       {gitOpen&&<GitTimeline commits={commits} selected={gitBaseline} loading={gitLoading} error={gitError}
         onSelect={setGitBaseline} onCompare={compare} onClose={()=>setGitOpen(false)} onRefresh={loadGit}/>}
-      {(message||baseline||graph.diagnostics.length>0)&&<div className="status-message" role="status"><i className={`codicon codicon-${graph.diagnostics.length?'warning':'info'}`}/>{message||`${graph.diagnostics.length} analyzer diagnostics`}{baseline?` · baseline ${baseline}`:''}</div>}
+      {(message||baseline||graph.diagnostics.length>0)&&<div className="status-message" role="status"><i className={`codicon codicon-${graph.diagnostics.length?'warning':'info'}`}/>{message||`${graph.diagnostics.length} analyzer diagnostics`}{baseline?` Â· baseline ${baseline}`:''}</div>}
     </main>
   </div>;
 }

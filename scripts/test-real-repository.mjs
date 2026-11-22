@@ -10,7 +10,9 @@ if(!fs.existsSync(path.join(repository,'.git'))){
 const git=(...args)=>execFileSync('git',['-C',repository,...args],{encoding:'utf8'}).trim();
 if(git('status','--porcelain'))throw Error('Temporary Flask clone must be clean before integration testing');
 if(git('rev-parse','HEAD')!==revision)execFileSync('git',['-C',repository,'checkout','--detach',revision],{stdio:'inherit'});
-const env={...process.env,XP_REAL_REPO:repository,XP_EVIDENCE_DIR:path.resolve('test-results/real-repository')};
+// Desktop launchers may strip empty GIT_CONFIG_VALUE_n variables while retaining
+// their count. The isolated fixture uses its own repository configuration.
+const env={...process.env,GIT_CONFIG_COUNT:'0',XP_REAL_REPO:repository,XP_EVIDENCE_DIR:path.resolve('test-results/real-repository')};
 const npm=process.platform==='win32'?'npm.cmd':'npm';
 const run=(args)=>{
  const result=spawnSync(npm,args,{env,stdio:'inherit',shell:process.platform==='win32'});
