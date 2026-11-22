@@ -1,0 +1,8 @@
+{
+  "artifact": "dist\\xp-code-canvas-0.6.1.vsix",
+  "files": 110,
+  "bytes": 6109874,
+  "sha256": "f34f624583ba57ed716fe07485d02e3646145d670721154f2bde56de297c66a9",
+  "runtime_verified": true,
+  "installed_files_verified": true
+}

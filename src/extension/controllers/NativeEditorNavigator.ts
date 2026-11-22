@@ -1,16 +1,19 @@
 import * as vscode from 'vscode';
 import * as crypto from 'node:crypto';
-import type { GraphNode, SourceGraph, CodeRegion } from '../../shared/types';
+import type { GraphNode, SourceGraph, CodeRegion, SourceCursor } from '../../shared/types';
 import { symbolAt } from '../../shared/graph';
+import { cursorWithinSymbol } from '../../shared/sourceNavigation';
 export class NativeEditorNavigator {
-  async open(node: GraphNode, target: vscode.ViewColumn):Promise<boolean> {
+  async open(node: GraphNode, target: vscode.ViewColumn, cursor?: SourceCursor):Promise<boolean> {
     if (node.baselineOnly) { void vscode.window.showWarningMessage('This removed Git symbol has no current editor location.'); return false; }
     const doc=await vscode.workspace.openTextDocument(vscode.Uri.parse(node.uri));
     const hash=crypto.createHash('sha256').update(doc.getText()).digest('hex');
     const valid=!node.stale && (!node.contentHash || hash===node.contentHash);
     const options:vscode.TextDocumentShowOptions={viewColumn:target,preview:false,preserveFocus:false};
     if (valid) {
-      const start=new vscode.Position(node.selectionRange.startLine,node.selectionRange.startCharacter);
+      const requested=cursorWithinSymbol(cursor,node.range)
+        ?new vscode.Position(cursor.line,cursor.character):undefined;
+      const start=requested?doc.validatePosition(requested):new vscode.Position(node.selectionRange.startLine,node.selectionRange.startCharacter);
       options.selection=new vscode.Range(start,start);
     } else {
       void vscode.window.showWarningMessage('UML source is stale; opened file without selecting an outdated source range. Refresh the graph.');

@@ -41,13 +41,14 @@ export function CanvasToolbar(p:ToolbarProps){
       <SymbolSearch symbols={p.symbols} value={p.search} onValue={p.setSearch} onPick={p.onPick}/>
       <div className="toolbar-spacer"/>
       <label className="canvas-layout-chooser" title="Graph layout"><i className="codicon codicon-layout" aria-hidden="true"/><select aria-label="Choose graph layout" value={p.state.layoutMode??(p.state.focusedFile?'file':'architecture')} onChange={e=>p.onLayout(e.target.value as LayoutMode)}>
-        <option value="architecture">Architecture</option><option value="file">File focus</option><option value="investigation">Investigation</option><option value="change">Changes</option>
+        <option value="spread">Spread (2-D)</option><option value="architecture">Architecture</option><option value="file">File focus</option><option value="investigation">Investigation</option><option value="change">Changes</option>
       </select></label>
       <div className="canvas-lens-switch" role="group" aria-label="Canvas visualization">
         <button type="button" aria-pressed={(p.state.lens??'uml')==='uml'} className={(p.state.lens??'uml')==='uml'?'active':''} onClick={()=>p.onLens('uml')} title="UML source graph"><i className="codicon codicon-type-hierarchy"/> UML</button>
         <button type="button" aria-pressed={p.state.lens==='sankey'} className={p.state.lens==='sankey'?'active':''} onClick={()=>p.onLens('sankey')} title="Source relationship Sankey"><i className="codicon codicon-graph"/> Flow</button>
       </div>
       <div className="toolbar-action-group">
+        <IconButton icon="layout" title="Spread & recover graph — clear trapped layout" onClick={()=>p.onLayout('spread')}/>
         <IconButton icon="list-tree" title="Align focused file" onClick={p.onAlign}/>
         <IconButton icon="layout" title="Auto-layout graph" onClick={p.onReflow}/>
         <IconButton icon="screen-full" title="Fit graph to view" onClick={p.onFit}/>

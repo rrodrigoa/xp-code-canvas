@@ -1,3 +1,27 @@
+# V6.1 integration — executed validation
+
+Date: 2026-11-20. Version: **0.6.1**. Branch: `codex/v6-1-usability`, based on current main `efc0274` (fast-forward pull reported up to date). The feature archive was reconciled by file/hunk; main's analyzer, lockfile dependencies, worker, layout readiness, search, Git and packaging fixes were preserved. AI features remain deferred.
+
+| Gate | Executed result |
+|---|---|
+| Dependencies | npm clean install completed; lockfile changes only root version to 0.6.1. Windows denied the initial sandbox esbuild access; elevated retry succeeded. |
+| TypeScript / ESLint | PASS — full semantic checks and lint, `v61-fast-final.log`. |
+| Unit / algorithms | PASS — 16 files, 66 tests; shared coverage 93.32% statements, 85.85% branches, 97.22% functions. Both existing visual smoke suites and new feature smoke passed. |
+| Python | PASS — 38 tests each on 3.11.9 and 3.13.0, 91% branch-aware coverage. Local test dependencies require PYTHONPATH; the first resumed run without it failed and was rerun successfully. |
+| Playwright | PASS — all 25 tests, 26.5 seconds. Includes 584-symbol readable recovery, exact nested-token UTF-16 cursor with emoji/CRLF, actual resize drag, saved dimensions across collapse/reopen, and existing 100/1,000/5,000-symbol and visual checks. Host messages are mocked. |
+| Fixture extension host | PASS — 3 tests: commands, native contribution manifest, exact editor line/column and fallback, source preservation. |
+| Fixture Windows installed VSIX | PASS — 2 tests, 13 seconds: analyzed cards, all five layouts, native editor and return. |
+
+Real Flask validation **PASS**: final corrected run `v61-real-corrected.log` completed **8 extension-host tests and 4 installed-VSIX desktop tests** (32 seconds for desktop). The actual dedicated Activity Bar icon was clicked, native modules and HEAD commits appeared, Spread showed its minimap, and History opened the populated timeline. The clone remained clean. Retained screenshots are in `docs/validation/flask/v61-*`; the earlier container fallback and inherited Git environment failures are not counted as passes.
+
+Final package: `npm run package`, `npm run test:package`, isolated VS Code CLI installation, and byte-for-byte installed runtime verification are recorded in `v61-package-final.log`, `v61-install-final.log` and `docs/validation/v61-vsix.json`. The package verifier checks ZIP integrity, version, analyzer modules, ELK worker, all new sidebar icons and exclusion of local test artifacts.
+
+Integration corrections: resolved new/shared layout types and cursor protocol, deduplicated initialization, queued sidebar actions until webview readiness, preserved method reveal, normalized CRLF and blank preview offsets, kept dimensions bounded and the source/context scroll regions inside resized cards, and prevented stale React Flow wrapper sizes after collapse. Visual inspection found VS Code rejected dots in the supplied Activity Bar container ID; changed it to `xpCodeCanvas-sidebar` and strengthened the installed test to click the actual Activity Bar icon. An unrelated Dev Containers notification obstructed the history comparison button; the desktop fixture now dismisses notifications. The real-repository launcher clears inherited counted Git config overrides because VS Code can strip their empty values.
+
+The V6 report below is historical evidence for 0.6.0, not a claim that its counts describe 0.6.1. Its unexecuted physical DPI, screen-reader, Linux/minimum-version and hosted CI gates remain **NOT EXECUTED**. No blocked or unexecuted check is treated as passing.
+
+---
+
 # XP Python UML Canvas V6 — Executed validation report
 
 **Date:** 2026-11-19 (America/Los_Angeles). **Version:** 0.6.0. Validation continued from the existing V6 implementation on Windows. Results below are executed checks, not authored-test claims. Earlier sandbox DNS, socket and Windows file-lock failures were retried; those failed attempts were not counted as passes.

@@ -11,6 +11,7 @@ import {GitHistoryService} from '../../src/extension/services/GitHistoryService'
 import {GitCompareService} from '../../src/extension/services/GitCompareService';
 import {SourcePreviewService} from '../../src/extension/services/SourcePreviewService';
 import {NativeEditorNavigator} from '../../src/extension/controllers/NativeEditorNavigator';
+import {SymbolTreeProvider,GitTreeProvider} from '../../src/extension/controllers/CanvasSidebar';
 import {snapshotGit} from '../../src/extension/gitSnapshot';
 import type {GraphNode} from '../../src/shared/types';
 
@@ -60,6 +61,22 @@ suite('Real Flask repository integration',()=>{
    assert.deepEqual(commit.parents,(await git('show','-s','--format=%P',commit.hash)).trim().split(' ').filter(Boolean));
   }
   evidence.history={count:commits.length,merges:commits.filter(c=>c.parents.length>1).length,first:commits[0]};
+ });
+ test('populates native structure and history trees from real Flask source and Git',async()=>{
+  const symbols=new SymbolTreeProvider(),history=new GitTreeProvider();
+  try{
+   symbols.update(index.graph);
+   assert.ok(symbols.getChildren().some(n=>n.id===module.id));
+   assert.ok(symbols.getChildren(module).some(n=>n.id===config.id));
+   const method=symbols.getChildren(config).find(n=>n.kind==='method')!;assert.ok(method);
+   assert.deepEqual(symbols.getTreeItem(method).command?.arguments,[method.id]);
+   await history.refresh();
+   assert.equal(history.getChildren().length,60);
+   const first=history.getChildren()[0];
+   assert.equal(first.hash,(await git('rev-parse','HEAD')).trim());
+   assert.deepEqual(history.getTreeItem(first).command?.arguments,[first.hash]);
+   evidence.sidebar={modules:symbols.getChildren().length,configMembers:symbols.getChildren(config).length,commits:history.getChildren().length};
+  }finally{symbols.dispose();history.dispose();}
  });
  test('attributes clean class and whole-file lines to real HEAD commits',async()=>{
   const service=new GitBlameService();

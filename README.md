@@ -1,4 +1,4 @@
-# XP Python UML Canvas — V6
+# XP Python UML Canvas — V6.1
 
 A **VS Code extension** for exploring Python repositories through interactive, source-backed UML diagrams and Git history. V6 is a visual and interaction engineering release built incrementally on V5. The Windows build, packaged desktop tests and validation limits are recorded in `docs/VALIDATION_REPORT.md`. AI explanations, AI walkthroughs and agent integration remain intentionally deferred.
 
@@ -9,6 +9,12 @@ A **VS Code extension** for exploring Python repositories through interactive, s
 - **Direct manipulation:** drag connected nodes, pin deliberately, and preserve positions for each layout. Normal wheel scrolls source or pans; Ctrl/Cmd+wheel zooms around the cursor. No separate permanent source/editor panel.
 - **Git intelligence:** local semantic comparisons, Git timeline, line-level blame of clean tracked revisions, author summaries and change-versus-possible-impact highlighting. Git attribution identifies the *last modifying commit*, not the original author or a code owner.
 - **UML and Flow lenses:** conventional UML links alongside an alternative static-relationship Sankey lens. Ribbon width means source-reference/callsite **counts**, not measured runtime traffic.
+
+## V6.1 additions
+
+- **Spread & Recover** clears saved positions and pins, arranges dense graphs in two dimensions, and opens a readable region with a minimap. Oversized File focus views wrap automatically.
+- The native **XP Code Canvas** Activity Bar contains **Python Structure** and **Git History** trees. Select a symbol to reveal it in the canvas, or a commit to compare it with current source.
+- Expanded source previews resize from the bottom-right corner and remember each symbol's dimensions. Select within highlighted code, then choose **Edit** to transfer the exact UTF-16 cursor to VS Code. Without a selection, Edit opens the first source line at column zero; the header Open action retains declaration navigation.
 
 ## V6 improvements
 
