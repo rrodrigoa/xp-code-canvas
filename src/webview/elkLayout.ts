@@ -4,7 +4,7 @@ import {detailForNode} from '../shared/semanticVisuals';
 const elk=new ELK();
 export interface NodeSize { width:number; height:number }
 export function nodeSize(node:GraphNode,state:CanvasState, memberCounts:ReadonlyMap<string,number>=new Map(),blameShown=false):NodeSize {
-  const tier=detailForNode(state.zoom,state.expanded.includes(node.id),state.selectedNode===node.id);
+  const tier=detailForNode(state.zoom,state.expanded.includes(node.id),state.selectedNode===node.id,state.semanticZoomStops);
   const custom=tier===3?state.nodeSizes?.[node.id]:undefined;
   // Match the visual card's bounded intrinsic width. Long Python signatures
   // get breathing room without creating unbounded horizontal lanes.

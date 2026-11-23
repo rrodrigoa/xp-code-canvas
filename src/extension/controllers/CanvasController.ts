@@ -2,6 +2,8 @@ import * as vscode from 'vscode';
 import type { CanvasState, SourceGraph, ToWebview } from '../../shared/types';
 import { IndexCoordinator } from '../services/IndexCoordinator';
 import { SourcePreviewService } from '../services/SourcePreviewService';
+import {InlineSourceEditService} from '../services/InlineSourceEditService';
+import {ReviewNodeDiffService} from '../review/ReviewNodeDiffService';
 import { NativeEditorNavigator } from './NativeEditorNavigator';
 import { enrichSelected } from '../adapters/VsCodeLanguageProvider';
 import { ViewSessionService } from '../services/ViewSessionService';
@@ -11,6 +13,10 @@ import { GitBlameService } from '../services/GitBlameService';
 import { fromWebviewSchema } from '../../core/contracts/viewState';
 import { CANVAS_VIEW_TYPE, canvasHtml } from './WebviewHost';
 import { useDelta } from '../../core/graph/GraphDelta';
+import { ReviewCoordinator } from '../review/ReviewCoordinator';
+import {ReviewRevisionService} from '../review/ReviewRevisionService';
+import { ReviewDiffService } from '../review/ReviewDiffService';
+import type {ReviewScope} from '../../review/reviewTypes';
 
 const EMPTY: SourceGraph = { schema: 1, nodes: [], edges: [], diagnostics: [] };
 
@@ -24,11 +30,16 @@ export class CanvasController implements vscode.Disposable {
   private readonly git: GitCompareService;
   private readonly gitHistory = new GitHistoryService();
   private readonly blame = new GitBlameService();
+  private readonly review:ReviewCoordinator;
+  private readonly reviewDiff=new ReviewDiffService();
+  private readonly revisions:ReviewRevisionService;
   private get state():CanvasState {return this.session.value;}
   private isReady = false;
   private pendingActions:import('../../shared/types').ToWebview[]=[];
   private readonly index: IndexCoordinator;
   private readonly previews = new SourcePreviewService();
+  private readonly inlineEdits = new InlineSourceEditService();
+  private readonly reviewLines = new ReviewNodeDiffService();
   private readonly navigator = new NativeEditorNavigator();
   private enriched = new Map<string,import('../../shared/types').GraphEdge[]>();
   private hadEnrichedOverlay = false;
@@ -41,16 +52,19 @@ export class CanvasController implements vscode.Disposable {
     this.index = new IndexCoordinator(context);
     this.session = new ViewSessionService(context,this.index.workspaceId);
     this.git = new GitCompareService(context);
+    this.review = new ReviewCoordinator(context);
+    this.revisions = new ReviewRevisionService(context);
     this.status.name = 'Python UML Canvas';
     this.status.command = 'xpCodeCanvas.open';
     this.status.text = '$(type-hierarchy) UML Canvas';
     this.status.tooltip = 'Open Python UML Canvas';
     this.status.show();
-    this.subscriptions.push(this.status, this.index, this.index.onGraph((graph,delta) => {
+    this.subscriptions.push(this.status,this.reviewDiff, this.index, this.index.onGraph((graph,delta) => {
       this.graph = graph;
       this.graphEmitter.fire(graph);
       this.enriched.clear();
       this.status.text = `$(type-hierarchy) UML: ${graph.nodes.length} symbols`;
+      if(this.review.snapshot) { this.send({type:'status',message:'Source changed since review opened. Refresh the review to update evidence.'}); return; }
       if(delta && !this.activeGitBaseline && !this.hadEnrichedOverlay && useDelta(delta,graph)) this.send({type:'graphDelta',delta});
       else this.send({type:'graph',graph,state:this.state});
       this.activeGitBaseline=null;
@@ -74,6 +88,12 @@ export class CanvasController implements vscode.Disposable {
   registerCommands(): vscode.Disposable[] {
     const commands: [string, (...args: any[]) => unknown][] = [
       ['xpCodeCanvas.open', () => this.open()],
+      ['xpCodeCanvas.open3D', () => this.open3D()],
+      ['xpCodeCanvas.reviewWorking', () => this.openReview('working')],
+      ['xpCodeCanvas.reviewUnstaged', () => this.openReview('unstaged')],
+      ['xpCodeCanvas.reviewStaged', () => this.openReview('staged')],
+      ['xpCodeCanvas.reviewBranch', async () => { const reference=await vscode.window.showInputBox({title:'Review branch changes',prompt:'Base branch or Git ref',value:'main'});if(reference)await this.openReview('branch',reference); }],
+      ['xpCodeCanvas.reviewPR', async () => { const reference=await vscode.window.showInputBox({title:'Review GitHub pull request',prompt:'owner/repository#123'});if(reference)await this.openReview('pr',reference); }],
       ['xpCodeCanvas.spreadGraph', () => this.spreadGraph()],
       ['xpCodeCanvas.focusSymbol', (item: string | import('../../shared/types').GraphNode) => this.focusSymbol(typeof item==='string'?item:item?.id)],
       ['xpCodeCanvas.showHistory', () => this.showHistory()],
@@ -94,6 +114,12 @@ export class CanvasController implements vscode.Disposable {
 
   private updateContext(has: boolean): void {
     void vscode.commands.executeCommand('setContext', 'xpCodeCanvas.hasCanvas', has);
+  }
+
+  async open3D():Promise<void>{
+    // Existing persisted webview remains the same tab; only the presentation changes.
+    await this.open();
+    this.sendOrQueue({type:'action',action:'3d'});
   }
 
   async open(): Promise<void> {
@@ -121,11 +147,61 @@ export class CanvasController implements vscode.Disposable {
     const messageSub = panel.webview.onDidReceiveMessage(async (untrusted: unknown) => {
       try {
         const message = fromWebviewSchema.parse(untrusted);
-        if (message.type === 'ready') { this.isReady = true; this.send({ type: 'graph', graph: this.graph, state: this.state }); for(const action of this.pendingActions.splice(0))this.send(action); }
+        if (message.type === 'ready') { this.isReady = true; this.send({ type: 'graph', graph: this.graph, state: this.state }); if(this.review.snapshot)this.send({type:'reviewSnapshot',review:this.review.snapshot}); for(const action of this.pendingActions.splice(0))this.send(action); }
+        if(message.type==='reviewCognition') {
+          try{this.send({type:'reviewSnapshot',review:await this.review.reason(message.action)});}
+          catch(error){this.send({type:'reviewError',message:String(error)});}
+        }
+        if(message.type==='reviewRevisionsRequest'&&this.review.snapshot){
+          try{this.send({type:'reviewRevisions',revisions:await this.revisions.list(this.review.snapshot)});}
+          catch(error){this.send({type:'reviewError',message:String(error)});}
+        }
+        if(message.type==='reviewRevisionLoad'&&this.review.snapshot){
+          try{this.send({type:'reviewRevisionGraph',revision:message.revision,graph:await this.revisions.get(this.review.snapshot,message.revision)});}
+          catch(error){this.send({type:'reviewError',message:String(error)});}
+        }
+        if(message.type==='reviewOpen') await this.openReview(message.scope,message.reference);
+        if(message.type==='reviewAction') {
+          try{
+            if(message.action.action==='refresh'&&this.review.snapshot){
+              const previous=this.review.snapshot;
+              // Refresh both local structural changes and remote discussion threads.
+              // GitHub PRs still retain their explicit owner/repository/number identity.
+              const reference=previous.pr?`${previous.pr.owner}/${previous.pr.repo}#${previous.pr.number}`:
+                previous.scope==='branch'?previous.baseline:undefined;
+              await this.openReview(previous.scope,reference);
+            }else this.send({type:'reviewSnapshot',review:await this.review.act(message.action)});
+          }catch(error){this.send({type:'reviewError',message:error instanceof Error?error.message:String(error)});}
+        }
+        if(message.type==='reviewClose')this.closeReview();
+        if(message.type==='reviewOpenUrl'){
+          const address=new URL(message.url);
+          if(address.protocol!=='https:'||address.hostname!=='github.com'||address.port||address.username||address.password)throw Error('Only GitHub HTTPS links may open externally');
+          await vscode.env.openExternal(vscode.Uri.parse(address.toString()));
+        }
+        if(message.type==='reviewDiff'&&this.review.snapshot){try{await this.reviewDiff.open(this.review.snapshot,message.path);}catch(error){this.send({type:'reviewError',message:String(error)});}}
         if (message.type === 'openNode' && typeof message.nodeId === 'string') await this.openNode(message.nodeId,message.cursor);
         if (message.type === 'selectNode' && typeof message.nodeId === 'string') void this.resolveSelected(message.nodeId);
         if (message.type === 'focusFile' && typeof message.uri === 'string') await this.focusFile(vscode.Uri.parse(message.uri));
         if (message.type === 'state') { this.setState(message.state); this.send({type:'stateAck',revision:this.session.stateRevision}); }
+        if(message.type==='getReviewLineOverlay'&&this.review.snapshot){
+          const node=this.review.snapshot.graph.nodes.find(n=>n.id===message.nodeId);
+          if(node){try{this.send({type:'reviewLineOverlay',result:await this.reviewLines.lines(node,this.review.snapshot)});}
+            catch(error){this.send({type:'reviewLineOverlay',result:{nodeId:message.nodeId,sourceHash:node.contentHash??'',baseline:this.review.snapshot.baseline,addedLines:[],addedCount:0,removedCount:0,message:error instanceof Error?error.message:String(error)}});}}
+        }
+        if(message.type==='applyInlineEdit'){
+          // Review snapshots may represent historical trees, but only the live document
+          // graph can authorize a local edit. Never write from a baseline-only node.
+          const node=this.graph.nodes.find(n=>n.id===message.nodeId);
+          const scope=this.review.snapshot?.scope;
+          // Webview controls are not an authorization boundary: enforce edit
+          // restrictions in the host as well, even for forged messages.
+          const result=scope&&!['working','unstaged'].includes(scope)
+            ?{ok:false,error:'Cannot edit historical/staged/PR review snapshots inline. Open the live source in VS Code.'}
+            :await this.inlineEdits.apply(node,message);
+          this.send({type:'inlineEditResult',nodeId:message.nodeId,...result});
+          if(result.ok&&node)this.index.schedule(vscode.Uri.parse(node.uri));
+        }
         if (message.type === 'getSourcePreview' && typeof message.nodeId === 'string' && typeof message.requestId === 'string') {
           const symbol=this.graph.nodes.find(n => n.id===message.nodeId);
           const preview=symbol ? await this.previews.get(symbol,message.expectedHash) : {stale:true,error:'Unknown symbol'};
@@ -173,6 +249,19 @@ export class CanvasController implements vscode.Disposable {
     return true;
   }
 
+  async openReview(scope:ReviewScope,reference?:string):Promise<void> {
+    await this.open();
+    if(!this.index.isReady())await this.refresh();
+    try {
+      const snapshot=await this.review.begin(scope,this.graph,reference);
+      this.sendOrQueue({type:'reviewSnapshot',review:snapshot});
+    }catch(error){this.sendOrQueue({type:'reviewError',message:error instanceof Error?error.message:String(error)});}
+  }
+  private closeReview():void {
+    this.review.close();
+    this.sendOrQueue({type:'reviewClosed'});
+    this.send({type:'graph',graph:this.graph,state:this.state});
+  }
   refresh(): Promise<void> {
     if(!this.refreshPromise)this.refreshPromise=this.refreshNow().finally(()=>{this.refreshPromise=undefined;});
     return this.refreshPromise;
@@ -283,7 +372,8 @@ export class CanvasController implements vscode.Disposable {
   }
 
   private async gitDiff(baseline: string): Promise<void> {
-    this.send({ type: 'status', message: `Comparing with ${baseline}â€¦` });
+    if(this.review.snapshot)this.closeReview();
+    this.send({ type: 'status', message: `Comparing with ${baseline}…` });
     const base=this.graph;
     const overlay=await this.git.compare(baseline,base);
     if(base!==this.graph)throw Error('Live graph changed during Git comparison; retry against the latest source');

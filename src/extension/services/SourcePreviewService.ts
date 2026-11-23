@@ -4,7 +4,7 @@ import type { GraphNode } from '../../shared/types';
 
 /** Source bytes never travel with the graph. Request bounded, verified snippets on demand. */
 export class SourcePreviewService {
-  async get(node: GraphNode, expectedHash: string):Promise<{source?:string;stale:boolean;error?:string}> {
+  async get(node: GraphNode, expectedHash: string):Promise<{source?:string;stale:boolean;truncated?:boolean;error?:string}> {
     if (node.baselineOnly) return {stale:true,error:'Removed Git baseline symbol has no live source'};
     if (node.stale) return {stale:true,error:'Temporarily invalid source: last-known-good symbol is stale'};
     const uri = vscode.Uri.parse(node.uri);
@@ -17,8 +17,9 @@ export class SourcePreviewService {
       if (startLine >= doc.lineCount || endLine >= doc.lineCount) return {stale:true,error:'Source span no longer exists'};
       const span = new vscode.Range(startLine,startCharacter,endLine,endCharacter);
       if (span.isEmpty && node.kind!=='module') return {stale:true,error:'Invalid source span'};
-      const source = node.kind==='module' ? doc.getText().slice(0,20000) : doc.getText(span).slice(0,20000);
-      return {source,stale:false};
+      const full = node.kind==='module' ? doc.getText() : doc.getText(span);
+      const source=full.slice(0,20000);
+      return {source,stale:false,truncated:full.length>20000};
     } catch(error) {return {stale:true,error:String(error)};}
   }
 }

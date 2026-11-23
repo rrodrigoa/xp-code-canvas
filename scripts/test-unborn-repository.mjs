@@ -1,0 +1,12 @@
+import {execFileSync,spawnSync} from 'node:child_process';
+import fs from 'node:fs';
+import path from 'node:path';
+const root=fs.mkdtempSync(path.resolve('.validation-runtime/unborn-'));
+const git=(...args)=>execFileSync('git',args,{cwd:root,stdio:'pipe',env:{...process.env,GIT_CONFIG_COUNT:'0'}});
+git('init','-q');
+fs.writeFileSync(path.join(root,'agent.py'),'def staged_probe():\n    return 1\n');
+fs.writeFileSync(path.join(root,'README.md'),'Staged documentation\n');
+git('add','agent.py','README.md');
+fs.writeFileSync(path.join(root,'untracked docs.md'),'Untracked documentation\n');
+const result=spawnSync(process.platform==='win32'?'npm.cmd':'npm',['run','test:extension'],{stdio:'inherit',shell:process.platform==='win32',env:{...process.env,GIT_CONFIG_COUNT:'0',XP_UNBORN_REPO:root}});
+process.exitCode=result.status??1;

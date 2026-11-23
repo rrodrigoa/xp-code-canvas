@@ -3,20 +3,17 @@ import { BaseEdge, EdgeLabelRenderer, getSmoothStepPath, useReactFlow } from '@x
 import type { EdgeProps, Edge } from '@xyflow/react';
 import type { GraphEdge } from '../../shared/types';
 import { placeEdgeLabel } from '../edgeLabels';
-export type UmlFlowEdge=Edge<{relation:GraphEdge;reveal?:boolean;labelPosition?:{x:number;y:number}},'uml'>;
-const colorByKind:Record<string,string>={
-  inherits:'var(--xp-edge-inheritance)',realizes:'var(--xp-edge-inheritance)',
-  calls:'var(--xp-edge-call)',imports:'var(--xp-edge-import)',
-  creates:'var(--xp-edge-create)',references:'var(--xp-edge-reference)',contains:'var(--xp-edge-contain)',
-};
+import {edgeAppearance} from '../../shared/visualLanguage';
+export type UmlFlowEdge=Edge<{relation:GraphEdge;reveal?:boolean;labelPosition?:{x:number;y:number};reviewCount?:{open:number;resolved:number;total:number}},'uml'>;
+
 export function UmlEdgeComponent({id,sourceX,sourceY,targetX,targetY,sourcePosition,targetPosition,data,selected}:EdgeProps<UmlFlowEdge>){
   const flow=useReactFlow();
   const relation=data?.relation;
   if(!relation)return null;
   const [path,labelX,labelY]=getSmoothStepPath({sourceX,sourceY,targetX,targetY,sourcePosition,targetPosition,borderRadius:14,offset:32});
   const umlTriangle=['inherits','realizes'].includes(relation.kind);
-  const isSolid=relation.kind==='inherits';
-  const stroke=colorByKind[relation.kind]??'var(--xp-edge-reference)';
+  const appearance=edgeAppearance(relation,Boolean(selected||data?.reveal),false);
+  const stroke=`var(${appearance.colorToken})`;
   const marker=`uml-arrow-${id.replace(/[^a-zA-Z0-9]/g,'_')}`;
   const changed=relation.change&&relation.change!=='UNCHANGED';
   const showLabel=Boolean(selected||data?.reveal);
@@ -27,9 +24,10 @@ export function UmlEdgeComponent({id,sourceX,sourceY,targetX,targetY,sourcePosit
       {umlTriangle?<path d="M2 1 L10 6 L2 11 Z" fill="var(--xp-surface-1)" stroke={stroke} strokeWidth="1.7"/>:<path d="M2 2 L10 6 L2 10" fill="none" stroke={stroke} strokeWidth="1.8" strokeLinejoin="round" strokeLinecap="round"/>}
     </marker></defs>
     <BaseEdge id={id} path={path} markerEnd={`url(#${marker})`} className={`uml-relation relation-${relation.kind}${changed?' relation-changed':''}`}
-      interactionWidth={24} style={{stroke,strokeWidth:selected||data?.reveal?2.7:1.75,
-        strokeDasharray:isSolid?undefined:relation.kind==='contains'?'2 5':'6 5',
-        opacity:relation.change==='REMOVED'?.34:relation.confidence!=='resolved'?.42:selected||data?.reveal?1:.78}}/>
+      interactionWidth={24} style={{stroke,strokeWidth:appearance.width,
+        strokeDasharray:appearance.dashed?`${appearance.dash} ${appearance.gap}`:undefined,
+        opacity:appearance.opacity}}/>
+    {Boolean(data?.reviewCount?.total)&&<EdgeLabelRenderer><div className={`review-edge-badge nodrag nopan ${data?.reviewCount?.open?'has-open':''}`} role="note" title={`${data?.reviewCount?.open??0} open, ${data?.reviewCount?.resolved??0} resolved discussions attached to relationship`} style={{position:'absolute',transform:`translate(-50%, -50%) translate(${(sourceX+targetX)/2}px,${(sourceY+targetY)/2-18}px)`}}><i className="codicon codicon-comment-discussion"/>{data?.reviewCount?.total}</div></EdgeLabelRenderer>}
     {label&&<EdgeLabelRenderer><div className={`edge-label nodrag nopan ${relation.confidence!=='resolved'?'edge-uncertain':''}`} style={{position:'absolute',transform:`translate(-50%, -50%) translate(${label.x}px,${label.y}px)`,pointerEvents:'none'}} role="note"
       title={relation.evidence.map(e=>`${e.uri}:${e.range.startLine+1}`).join('\n')}>
       <span className="edge-label-dot" style={{background:stroke}}/> «{relation.kind}»{(relation.count??1)>1?` ×${relation.count}`:''}{changed?` · ${relation.change?.toLowerCase()}`:''}

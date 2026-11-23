@@ -1,9 +1,9 @@
 {
   "name": "xp-code-canvas",
   "displayName": "XP Python UML Canvas",
-  "description": "Production-oriented Python UML canvas: measured stable layouts, contextual navigation, Git attribution, Sankey flow, accessible and responsive views",
+  "description": "Python architecture and code review across synchronized 2D UML, 3D graph and Sankey lenses",
   "publisher": "xp-libs",
-  "version": "0.6.1",
+  "version": "0.8.1",
   "license": "MIT",
   "private": true,
   "repository": {
@@ -32,7 +32,10 @@
     "onCommand:xpCodeCanvas.returnToCanvas",
     "onWebviewPanel:xpCodeCanvas.canvas",
     "onView:xpCodeCanvas.structure",
-    "onView:xpCodeCanvas.history"
+    "onView:xpCodeCanvas.history",
+    "onView:xpCodeCanvas.reviews",
+    "onCommand:xpCodeCanvas.open3D",
+    "onView:xpCodeCanvas.explore"
   ],
   "icon": "media/icon.png",
   "contributes": {
@@ -42,6 +45,12 @@
         "title": "Open UML Canvas",
         "category": "Python UML Canvas",
         "icon": "$(type-hierarchy)"
+      },
+      {
+        "command": "xpCodeCanvas.open3D",
+        "title": "Open 3D UML Canvas",
+        "category": "Python UML Canvas",
+        "icon": "$(globe)"
       },
       {
         "command": "xpCodeCanvas.focusCurrentFile",
@@ -128,6 +137,36 @@
         "title": "Show Git Blame for Selected Symbol",
         "category": "Python UML Canvas",
         "icon": "$(git-commit)"
+      },
+      {
+        "command": "xpCodeCanvas.reviewWorking",
+        "title": "Review Working Changes in UML",
+        "category": "Python UML Canvas",
+        "icon": "$(git-compare)"
+      },
+      {
+        "command": "xpCodeCanvas.reviewUnstaged",
+        "title": "Review Unstaged Changes in UML",
+        "category": "Python UML Canvas",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "xpCodeCanvas.reviewStaged",
+        "title": "Review Staged Changes in UML",
+        "category": "Python UML Canvas",
+        "icon": "$(git-commit)"
+      },
+      {
+        "command": "xpCodeCanvas.reviewBranch",
+        "title": "Review Branch Architecture",
+        "category": "Python UML Canvas",
+        "icon": "$(git-branch)"
+      },
+      {
+        "command": "xpCodeCanvas.reviewPR",
+        "title": "Review GitHub Pull Request in UML",
+        "category": "Python UML Canvas",
+        "icon": "$(git-pull-request)"
       }
     ],
     "menus": {
@@ -175,6 +214,11 @@
           "command": "xpCodeCanvas.showBlame",
           "when": "view == xpCodeCanvas.structure",
           "group": "navigation@6"
+        },
+        {
+          "command": "xpCodeCanvas.open3D",
+          "when": "view == xpCodeCanvas.structure",
+          "group": "navigation@15"
         }
       ],
       "view/item/context": [
@@ -187,6 +231,16 @@
           "command": "xpCodeCanvas.compareCommit",
           "when": "view == xpCodeCanvas.history && viewItem == xpCanvasCommit",
           "group": "inline"
+        }
+      ],
+      "scm/title": [
+        {
+          "command": "xpCodeCanvas.reviewStaged",
+          "group": "navigation@20"
+        },
+        {
+          "command": "xpCodeCanvas.reviewWorking",
+          "group": "navigation@21"
         }
       ]
     },
@@ -275,6 +329,12 @@
     "views": {
       "xpCodeCanvas-sidebar": [
         {
+          "id": "xpCodeCanvas.explore",
+          "name": "Explore 2D / 3D",
+          "icon": "media/structure.svg",
+          "visibility": "visible"
+        },
+        {
           "id": "xpCodeCanvas.structure",
           "name": "Python Structure",
           "icon": "media/structure.svg",
@@ -285,6 +345,12 @@
           "name": "Git History",
           "icon": "media/git-history.svg",
           "visibility": "collapsed"
+        },
+        {
+          "id": "xpCodeCanvas.reviews",
+          "name": "Code Reviews",
+          "icon": "media/git-history.svg",
+          "visibility": "visible"
         }
       ]
     },
@@ -296,6 +362,10 @@
       {
         "view": "xpCodeCanvas.history",
         "contents": "Open a Git repository to explore source history.\n[Refresh Git History](command:xpCodeCanvas.refreshSidebar)"
+      },
+      {
+        "view": "xpCodeCanvas.reviews",
+        "contents": "Review staged or working changes in the UML graph.\n[Review Working Tree](command:xpCodeCanvas.reviewWorking)\n[Review Staged Changes](command:xpCodeCanvas.reviewStaged)\n[Review GitHub PR](command:xpCodeCanvas.reviewPR)"
       }
     ]
   },
@@ -317,14 +387,19 @@
     "test:extension": "npm run build && vscode-test",
     "test:desktop-e2e": "extest setup-and-run --config extester.config.json",
     "test:real-repo": "node scripts/test-real-repository.mjs",
-    "package": "npm run build && vsce package --out dist/xp-code-canvas-0.6.1.vsix",
+    "package": "npm run build && vsce package --out dist/xp-code-canvas-0.8.1.vsix",
     "verify:core": "npm run verify:fast && npm run test:canvas-e2e && npm run test:extension && npm run package",
     "verify": "npm run verify:core && npm run test:desktop-e2e",
     "test:contracts": "vitest run tests/unit/graphDelta.test.ts tests/unit/gitTree.test.ts",
-    "verify:fast": "npm run typecheck && npm run lint && npm run test:python && npm run test:visual-smoke && npm run test:unit && npm run test:visual-v6 && npm run test:feature-smoke",
+    "verify:fast": "npm run typecheck && npm run lint && npm run test:python && npm run test:visual-smoke && npm run test:unit && npm run test:visual-v6 && npm run test:review:smoke && npm run test:spatial-v8 && npm run test:spatial-v81 && npm run test:feature-smoke && npm run test:v72-smoke && npm run test:v72-study",
     "test:visual-smoke": "node scripts/visual-smoke.cjs",
     "test:visual-v6": "node scripts/v6-visual-smoke.cjs",
     "test:feature-smoke": "node scripts/feature-smoke.cjs",
+    "test:review:smoke": "node scripts/review-standalone-smoke.cjs && node scripts/review-notes-contract-smoke.cjs && node scripts/review-api-contract-smoke.cjs",
+    "test:v72-smoke": "node scripts/v72-review-smoke.cjs",
+    "test:v72-study": "python -m unittest discover -s studies/v72 -p test_*.py",
+    "test:spatial-v8": "node --experimental-strip-types scripts/v8-spatial-smoke.mjs",
+    "test:spatial-v81": "node scripts/v81-visual-smoke.cjs",
     "test:package": "python scripts/verify-vsix.py"
   },
   "dependencies": {
@@ -335,7 +410,9 @@
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "zod": "^3.25.20",
-    "zustand": "^5.0.5"
+    "zustand": "^5.0.5",
+    "react-force-graph-3d": "^1.29.0",
+    "three": "^0.181.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.26.0",
@@ -359,7 +436,8 @@
     "vite": "^6.3.5",
     "vitest": "^3.2.0",
     "vscode-extension-tester": "^8.0.0",
-    "@vscode/vsce": "^3.5.0"
+    "@vscode/vsce": "^3.5.0",
+    "@types/three": "^0.181.0"
   },
   "extensionKind": [
     "workspace"

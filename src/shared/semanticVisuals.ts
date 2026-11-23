@@ -1,3 +1,4 @@
+import { DEFAULT_SEMANTIC_ZOOM_STOPS, type SemanticZoomStops } from './semanticZoom';
 /** Source-backed visual semantics. All color meaning is separate from Git status.
  * No AI inference, runtime profiling, or estimated execution flow is involved. */
 import type { GraphNode, SourceGraph, NodeKind, ChangeStatus } from './types';
@@ -15,11 +16,11 @@ export interface StructureSummary {
 }
 
 /** Stable threshold bands; a selected/explicitly opened node can independently reach source. */
-export function detailForZoom(zoom: number, expanded = false): SemanticDetail {
+export function detailForZoom(zoom: number, expanded = false, stops:SemanticZoomStops=DEFAULT_SEMANTIC_ZOOM_STOPS): SemanticDetail {
   if (expanded) return 3;
-  if (zoom < 0.64) return 0;
-  if (zoom < 1.13) return 1;
-  if (zoom < 1.88) return 2;
+  if (zoom < stops[0]) return 0;
+  if (zoom < stops[1]) return 1;
+  if (zoom < stops[2]) return 2;
   return 3;
 }
 /** At high canvas magnification, expand source ONLY for the selected or explicitly
@@ -29,9 +30,10 @@ export function detailForNode(
   zoom:number,
   manuallyExpanded:boolean,
   selected:boolean,
+  stops:SemanticZoomStops=DEFAULT_SEMANTIC_ZOOM_STOPS,
 ):SemanticDetail {
-  if (manuallyExpanded || (selected && zoom >= 1.88)) return 3;
-  return Math.min(2,detailForZoom(zoom)) as SemanticDetail;
+  if (manuallyExpanded || (selected && zoom >= stops[2])) return 3;
+  return Math.min(2,detailForZoom(zoom,false,stops)) as SemanticDetail;
 }
 export function semanticRole(kind: NodeKind): VisualRole {
   if (kind === 'module') return 'module';

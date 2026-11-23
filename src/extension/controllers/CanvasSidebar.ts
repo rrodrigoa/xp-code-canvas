@@ -72,18 +72,55 @@ export class GitTreeProvider implements vscode.TreeDataProvider<GitCommit> {
   dispose():void {this.emitter.dispose();}
 }
 
+type ReviewEntry = {label:string;detail:string;icon:string;command:string};
+class ReviewEntryProvider implements vscode.TreeDataProvider<ReviewEntry> {
+  private readonly entries:ReviewEntry[]=[
+    {label:'Review working changes',detail:'HEAD → editor',icon:'git-compare',command:'xpCodeCanvas.reviewWorking'},
+    {label:'Review unstaged changes',detail:'INDEX → editor',icon:'edit',command:'xpCodeCanvas.reviewUnstaged'},
+    {label:'Review staged changes',detail:'HEAD → index',icon:'git-commit',command:'xpCodeCanvas.reviewStaged'},
+    {label:'Review branch',detail:'Compare to merge base',icon:'git-branch',command:'xpCodeCanvas.reviewBranch'},
+    {label:'Review GitHub pull request',detail:'Compare commits and discussions',icon:'git-pull-request',command:'xpCodeCanvas.reviewPR'},
+  ];
+  getTreeItem(entry:ReviewEntry):vscode.TreeItem {
+    const item=new vscode.TreeItem(entry.label,vscode.TreeItemCollapsibleState.None);
+    item.description=entry.detail;item.iconPath=new vscode.ThemeIcon(entry.icon);
+    item.command={command:entry.command,title:entry.label};return item;
+  }
+  getChildren():ReviewEntry[]{return this.entries;}
+}
+
+class ExploreEntryProvider implements vscode.TreeDataProvider<ReviewEntry>{
+  private readonly entries:ReviewEntry[]=[
+    {label:'Open 2D UML',detail:'Traditional editable Python architecture map',icon:'type-hierarchy',command:'xpCodeCanvas.open'},
+    {label:'Open 3D UML',detail:'Orbit, folder clusters, connectivity & code review',icon:'globe',command:'xpCodeCanvas.open3D'},
+    {label:'Spread and recover',detail:'Restore a crowded 2D layout',icon:'layout',command:'xpCodeCanvas.spreadGraph'},
+    {label:'Review working changes',detail:'Inspect changed architecture',icon:'git-compare',command:'xpCodeCanvas.reviewWorking'},
+    {label:'Review staged changes',detail:'HEAD to Git index',icon:'git-commit',command:'xpCodeCanvas.reviewStaged'},
+  ];
+  getTreeItem(entry:ReviewEntry):vscode.TreeItem{
+    const item=new vscode.TreeItem(entry.label,vscode.TreeItemCollapsibleState.None);
+    item.description=entry.detail;item.iconPath=new vscode.ThemeIcon(entry.icon);
+    item.command={command:entry.command,title:entry.label};return item;
+  }
+  getChildren():ReviewEntry[]{return this.entries;}
+}
+
 /** Two useful native trees, rather than an Activity Bar shortcut that just opens a webview. */
 export class CanvasSidebar implements vscode.Disposable {
   private readonly symbols=new SymbolTreeProvider();
   private readonly git=new GitTreeProvider();
+  private readonly reviewEntries=new ReviewEntryProvider();
+  private readonly exploreEntries=new ExploreEntryProvider();
   private readonly subscriptions:vscode.Disposable[]=[];
   constructor(private readonly controller:{onDidGraph:vscode.Event<SourceGraph>;graphSnapshot:SourceGraph;refresh():Promise<void>}) {
     this.symbols.update(controller.graphSnapshot);
     this.subscriptions.push(this.symbols,this.git);
     this.subscriptions.push(controller.onDidGraph(graph=>this.symbols.update(graph)));
+    const explore=vscode.window.createTreeView('xpCodeCanvas.explore',{treeDataProvider:this.exploreEntries});
     const structure=vscode.window.createTreeView('xpCodeCanvas.structure',{treeDataProvider:this.symbols,showCollapseAll:true});
     const history=vscode.window.createTreeView('xpCodeCanvas.history',{treeDataProvider:this.git});
-    this.subscriptions.push(structure,history);
+    const reviews=vscode.window.createTreeView('xpCodeCanvas.reviews',{treeDataProvider:this.reviewEntries});
+    this.subscriptions.push(explore,structure,history,reviews);
     structure.onDidChangeVisibility(event=>{if(event.visible && !controller.graphSnapshot.nodes.length)void controller.refresh();},null,this.subscriptions);
     history.onDidChangeVisibility(event=>{if(event.visible)void this.git.refresh();},null,this.subscriptions);
     if(structure.visible&&!controller.graphSnapshot.nodes.length)void controller.refresh();

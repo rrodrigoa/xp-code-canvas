@@ -4,19 +4,32 @@ import { DEFAULT_CANVAS_STATE } from '../shared/types';
 import { applySourceDelta, type SourceGraphDelta } from '../core/graph/GraphDelta';
 import { bridge, request } from './bridge';
 import type { BlameResult } from '../shared/blame';
+import type { ReviewSnapshot } from '../review/reviewTypes';
+import type {ReviewLineOverlay} from '../shared/reviewLineOverlay';
 
 interface CanvasStore {
   graph: SourceGraph;
   state: CanvasState;
   baseline: string | null;
+  review: ReviewSnapshot | null;
+  setReview: (review: ReviewSnapshot) => void;
+  clearReview: () => void;
   message: string;
-  previews: Record<string,{contentHash:string;source?:string;stale:boolean;error?:string}>;
+  previews: Record<string,{contentHash:string;source?:string;stale:boolean;truncated?:boolean;error?:string}>;
   blames: Record<string,BlameResult>;
+  inlineEditResults:Record<string,{ok:boolean;error?:string;sequence:number}>;
+  /** Volatile, never persisted to VS Code workspaceState; preserves drafts across offscreen node virtualization. */
+  inlineDrafts:Record<string,{originalSource:string;updatedSource:string;expectedHash:string}>;
+  setInlineDraft:(nodeId:string,draft:{originalSource:string;updatedSource:string;expectedHash:string})=>void;
+  clearInlineDraft:(nodeId:string)=>void;
+  reviewLineOverlays:Record<string,ReviewLineOverlay>;
+  acceptReviewLineOverlay:(result:ReviewLineOverlay)=>void;
+  acceptInlineEditResult:(nodeId:string,ok:boolean,error?:string)=>void;
   acceptBlame:(result:BlameResult)=>void;
   back:()=>void; forward:()=>void;
   stateRevision: number;
   pendingState: boolean;
-  acceptPreview: (nodeId:string,contentHash:string,source:string|undefined,stale:boolean,error?:string)=>void;
+  acceptPreview: (nodeId:string,contentHash:string,source:string|undefined,stale:boolean,error?:string,truncated?:boolean)=>void;
   acknowledgeState: (revision:number)=>void;
   hydrate: (graph: SourceGraph, state?: CanvasState) => void;
   applyDelta: (delta:SourceGraphDelta)=>boolean;
@@ -34,26 +47,46 @@ interface CanvasStore {
 const saved = bridge.getState() as CanvasState | undefined;
 const initialState = saved?.schema === 1 ? { ...DEFAULT_CANVAS_STATE, ...saved, layoutMode:saved.layoutMode??(saved.focusedFile?'file':'architecture') } : DEFAULT_CANVAS_STATE;
 let saveTimer: ReturnType<typeof setTimeout> | undefined;
+let reviewReturnState:CanvasState|null=null;
 
 export const useCanvasStore = create<CanvasStore>((set, get) => ({
   graph: { schema: 1, nodes: [], edges: [], diagnostics: [] },
-  state: initialState, baseline: null, message: '', previews: {}, blames:{}, stateRevision: 0, pendingState: false,
+  state: initialState, baseline: null, review:null, message: '', previews: {}, blames:{},inlineEditResults:{},inlineDrafts:{},reviewLineOverlays:{}, stateRevision: 0, pendingState: false,
+  setReview:review=>{
+    const current=get();
+    // Replies and review progress must not recreate the graph or rearrange existing nodes.
+    if(current.review?.reviewKey===review.reviewKey && current.review.createdAt===review.createdAt){
+      set({review:{...review,graph:current.graph},message:review.message??''});return;
+    }
+    if(!current.review)reviewReturnState=current.state;
+    const state={...current.state,altitude:'code' as const,layoutMode:'change' as const,trace:'all' as const};
+    set({review,graph:review.graph,state,baseline:null,previews:{},blames:{},reviewLineOverlays:{},message:review.message??''});
+  },
+  clearReview:()=>{
+    const previous=reviewReturnState;reviewReturnState=null;
+    set(s=>({review:null,state:previous??s.state,baseline:null,message:''}));
+    if(previous){bridge.setState(previous);request({type:'state',state:previous});}
+  },
+  setInlineDraft:(nodeId,draft)=>set(s=>({inlineDrafts:{...s.inlineDrafts,[nodeId]:draft}})),
+  clearInlineDraft:nodeId=>set(s=>{const inlineDrafts={...s.inlineDrafts};delete inlineDrafts[nodeId];return {inlineDrafts};}),
+  acceptReviewLineOverlay:result=>set(s=>({reviewLineOverlays:{...s.reviewLineOverlays,[result.nodeId]:result}})),
+  acceptInlineEditResult:(nodeId,ok,error)=>set(s=>({inlineEditResults:{...s.inlineEditResults,[nodeId]:{ok,error,sequence:(s.inlineEditResults[nodeId]?.sequence??0)+1}}})),
   acceptBlame:result=>set(s=>{
     const node=s.graph.nodes.find(n=>n.id===result.nodeId);
     if(node&&result.sourceHash&&node.contentHash!==result.sourceHash)return s;
     if(!node&&result.status!=='unavailable')return s;
     return {blames:{...s.blames,[result.nodeId]:result}};
   }),
-  acceptPreview: (nodeId,contentHash,source,stale,error) => set(s=>{
+  acceptPreview: (nodeId,contentHash,source,stale,error,truncated=false) => set(s=>{
     const current=s.graph.nodes.find(n=>n.id===nodeId);
     if(!current || current.contentHash && contentHash!==current.contentHash)return s;
-    return {previews:{...s.previews,[nodeId]:{contentHash,source,stale,error}}};
+    return {previews:{...s.previews,[nodeId]:{contentHash,source,stale,error,truncated}}};
   }),
   acknowledgeState: revision => set(s=>({stateRevision:Math.max(s.stateRevision,revision),pendingState:false})),
-  hydrate: (graph, state) => set(s => ({ graph, state: !s.pendingState && state ? {...s.state,...state,layoutMode:state.layoutMode??(state.focusedFile?'file':'architecture')} : s.state, baseline: null, previews:{}, blames:{} })),
+  hydrate: (graph, state) => set(s => ({ graph:s.review?.graph??graph, state: !s.pendingState && state ? {...s.state,...state,layoutMode:state.layoutMode??(state.focusedFile?'file':'architecture')} : s.state, baseline: null, previews:{}, blames:{} })),
   applyDelta: delta => {
     const current=get();
-    if(current.baseline || current.graph.revision!==delta.baseRevision)return false;
+    if(current.review || current.baseline || current.graph.revision!==delta.baseRevision)return false;
     try {
       const graph=applySourceDelta(current.graph,delta);
       const previews={...current.previews};

@@ -1,0 +1,122 @@
+{
+  "repository": {
+    "url": "https://github.com/pallets/flask",
+    "head": "49943b5a94413a530761350f04e896f76e8d620e",
+    "commits": 5566
+  },
+  "index": {
+    "nodes": 1705,
+    "edges": 387,
+    "files": 83,
+    "milliseconds": 1600,
+    "diagnostics": 0
+  },
+  "preview": {
+    "name": "flask.config.Config",
+    "characters": 12441,
+    "stale": false
+  },
+  "history": {
+    "count": 100,
+    "merges": 37,
+    "first": {
+      "hash": "49943b5a94413a530761350f04e896f76e8d620e",
+      "parents": [
+        "d04a0c15a83c78186cf31dc5d226b3110321b9e5",
+        "bfc8f983871dcadf0492578d9ab72d951b34c19c"
+      ],
+      "subject": "add `versionchanged` for ctx signature change (#6176)",
+      "author": "David Lord",
+      "date": "2026-10-30T08:05:20-07:00",
+      "refs": [
+        "HEAD -> main",
+        "origin/main",
+        "origin/HEAD"
+      ]
+    }
+  },
+  "sidebar": {
+    "modules": 83,
+    "configMembers": 9,
+    "commits": 60
+  },
+  "blame-class": {
+    "lines": 318,
+    "commits": 35,
+    "authors": 19,
+    "historicalPaths": [
+      "src/flask/config.py",
+      "flask/conf.py",
+      "flask/config.py"
+    ],
+    "first": {
+      "hash": "6000e80acf931b05b4911c3fa7f3ba33e2b80e64",
+      "line": 50,
+      "author": "David Lord",
+      "summary": "address mypy strict findings"
+    }
+  },
+  "blame-module": {
+    "lines": 367,
+    "commits": 41,
+    "authors": 20,
+    "historicalPaths": [
+      "src/flask/config.py",
+      "flask/conf.py",
+      "flask/config.py"
+    ],
+    "first": {
+      "hash": "44ffe6c6d6c90a414de32db1b03d5978f8770271",
+      "line": 1,
+      "author": "David Lord",
+      "summary": "add __future__ annotations"
+    }
+  },
+  "comparison": {
+    "baseline": "1d610e44b396d11113bb6a5d168cc5e996a6dfb9^",
+    "files": 82,
+    "changes": 480,
+    "kinds": [
+      "MODIFIED",
+      "IMPACTED",
+      "ADDED",
+      "REMOVED"
+    ]
+  },
+  "dirtyBuffers": {
+    "unsaved": "dirty",
+    "savedEdits": "dirty",
+    "stalePreviewRejected": true,
+    "incrementalSymbolObserved": true,
+    "restored": "clean"
+  },
+  "renames": {
+    "stagedRename": "dirty",
+    "indexUsesRenamedPath": true,
+    "untracked": "untracked"
+  },
+  "navigation": {
+    "group": 2,
+    "declarationLine": 49,
+    "anatomyLine": 35
+  },
+  "realPR": {
+    "url": "https://github.com/pallets/flask/pull/6176",
+    "base": "d04a0c15a83c78186cf31dc5d226b3110321b9e5",
+    "head": "bfc8f983871dcadf0492578d9ab72d951b34c19c",
+    "files": [
+      {
+        "path": "src/flask/app.py",
+        "status": "modified"
+      }
+    ],
+    "changed": 40,
+    "transformations": 16
+  },
+  "realStagedReview": {
+    "files": 26,
+    "unsavedExcludedFromStaged": true,
+    "unsavedIncludedInUnstaged": true,
+    "markdownEvidence": 25
+  }
+}

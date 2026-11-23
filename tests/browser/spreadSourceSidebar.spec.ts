@@ -44,7 +44,7 @@ test('syntax preview selection carries the exact UTF-16 editor cursor on Edit',a
   selection.removeAllRanges();selection.addRange(range);
   code.dispatchEvent(new MouseEvent('mouseup',{bubbles:true}));
  });
- await node.getByRole('button',{name:/Edit/}).click();
+ await node.getByRole('button',{name:'Native editor',exact:true}).click();
  const out=await page.evaluate(()=>((window as any).__messages as any[]).filter(m=>m.type==='openNode').at(-1));
  expect(out.nodeId).toBe(req.nodeId);
  expect(out.cursor.line).toBe(symbol.range.startLine+1);

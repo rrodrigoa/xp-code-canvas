@@ -1,0 +1,14 @@
+{
+  "count": 1000,
+  "relations": 2000,
+  "loadMs": 7983,
+  "fps": 32.98380347560675,
+  "worstFrameMs": 50.100000000000364,
+  "gpuTextures": "20",
+  "drawCalls": "50",
+  "gpuGeometries": "2768",
+  "gpuRenderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+  "estimatedTextureBytes": "3932160",
+  "jsHeapBytes": 86400000,
+  "errors": []
+}

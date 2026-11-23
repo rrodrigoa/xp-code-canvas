@@ -1,6 +1,12 @@
-# XP Python UML Canvas — V6.1
+# XP Python UML Canvas — V8.1
 
-A **VS Code extension** for exploring Python repositories through interactive, source-backed UML diagrams and Git history. V6 is a visual and interaction engineering release built incrementally on V5. The Windows build, packaged desktop tests and validation limits are recorded in `docs/VALIDATION_REPORT.md`. AI explanations, AI walkthroughs and agent integration remain intentionally deferred.
+> **V8.1:** optional camera-facing 3D UML cards, shared relationship/Git styling, bounded detail, camera navigation, and class/community/change partitions. Integrated additively into the authoritative local repository. See [changes](docs/V8_1_CHANGELOG.md), [executed validation and limits](docs/VALIDATION_V8_1.md), and [visual design](docs/V8_1_VISUAL_PARITY.md). Install the locally built `dist/xp-code-canvas-0.8.1.vsix`.
+
+A **VS Code extension** for exploring Python repositories through source-backed UML, optional 3D and Sankey views, Git history and visual architecture reviews. Existing 2D functionality and local fixes are preserved. AI explanations, AI walkthroughs and semantic layout remain deferred.
+
+## Visual Architecture Review
+
+The visual reviewer highlights **directly changed** code separately from **potentially affected** code, supports staged/unstaged/working/branch/PR comparisons, adds UML discussion counters, opens native diffs, and manages local/GitHub threads with explicit publishing. See `docs/visual-review/QUICK_START.md`. Nothing is posted automatically.
 
 ## What the product does
 
@@ -81,7 +87,7 @@ A genuine `package-lock.json` was generated with npm and verified with `npm ci`.
 
 ## Known validation boundary
 
-**Executed:** full TypeScript semantic checks including browser and unit test sources; lint; 61 unit tests; 38 Python analyzer tests with 91% coverage; both visual algorithm suites; React/extension builds; Playwright interactions and 100/1,000/5,000-symbol cyclic layouts; VS Code extension-host and installed Windows desktop tests; VSIX packaging. See the validation report for final counts and artifact installation evidence.
+**Executed:** full TypeScript checks and lint; 103 unit tests; 39 Python tests; 44 browser tests including WebGL/cursor/fallback cases; Extension Host and installed Windows tests; real Flask PR/staged comparisons; 50–10,000-symbol cyclic WebGL profiles. See [the current validation report](docs/VALIDATION_V8_1.md) for exact commands, receipts, installation evidence and limits.
 
 **Unverified:** physical Windows display scaling, assistive-technology review, Git scenarios beyond the documented Flask matrix, Linux VSIX installation and minimum-version VS Code compatibility. Browser device scaling is tested separately from Windows display scaling. Static preview images remain illustrative; runtime desktop captures are identified separately.
 
@@ -92,7 +98,29 @@ Read [`docs/VALIDATION_REPORT.md`](docs/VALIDATION_REPORT.md) for exact results 
 - The code and Git data remain local; the analyzer must not import or execute user projects.
 - Unsaved Python text is authoritative for the live graph. Git blame is only attributed to source genuinely matching a historical revision; dirty or unsaved text must not be assigned false authorship.
 - Python dynamic dispatch and monkey-patching cannot always be resolved statically. Uncertain relationships must be marked uncertain, not presented as confirmed.
-- The standard VS Code editor remains the *only full editing surface*. The graph source viewer is read-only.
+- The native VS Code editor remains the full editing surface. Bounded live Python spans can also be edited inline with explicit save and source-hash guards; historical review frames remain read-only.
 - **AI features are excluded:** see `specs/AI_DEFERRED.md` solely for future work. Do not add AI dependencies, agent commands or mock AI interfaces to the core product.
 
 MIT license. Review the validation report and remaining manual release gates before publishing.
+
+## V7.1 — Visual review and inline editing
+
+V7.1 adds a source-backed **Change Atlas** in the Review dock (connected architectural change groups, relation changes, possible callers, and separate Markdown/test/config changes), an optional **Detail zoom** rail with three movable semantic-zoom thresholds on the left canvas, and a **guarded inline Python editor** inside the existing resizable UML source viewport. The standard VS Code editor remains available. In review mode, selected live source previews can show actual line additions/replacements compared with Git (native diff remains available for full context). No LLM reviewer, explanation or agent integration was added.
+
+The original version-specific validation documents are retained as historical records; the current V8.1 validation report supersedes their unexecuted integration gates.
+
+## V7.2 — Change Cognition (additive source integration)
+
+V7.2 adds deterministic Before/Delta/After architecture review, source-backed structural transformation facts, an evidence map, reviewer questions and coverage, bookmarks, a comparison shelf, and optional revision scrubbing/blink. It does not infer behavioral correctness or test results. Human-study resources are included; no human-study findings are claimed.
+
+See `docs/V7_2_CHANGE_COGNITION.md` and the current `docs/VALIDATION_V8_1.md`.
+
+## V8 optional 3D UML and shared visualization projection
+
+V8 introduces an **optional 3D UML graph** in the same editor as 2D UML and Sankey/Flow. The user can switch among the three lenses while retaining the canonical source-backed graph, selected symbol, PR/working-tree review, comments, Git evidence and native-editor navigation. The 3D renderer loads only when selected; unavailable WebGL falls back to the existing 2D graph.
+
+The spatial engine supports deterministic **force-directed**, **connectivity-core**, **folder constellations**, **dependency-layer**, and **code-size/periphery** algorithms. Matching **Folder** and **Hub** layouts are also available for 2D. Connection-heavy constructs can be placed near the core, or directories clustered into translucent volumes; no spatial position asserts code quality or a newly inferred relationship. Git changes and possible impact are highlighted separately from unchanged context. Drag to rotate, Shift+drag to pan, Ctrl+wheel to zoom; inspect a symbol to navigate, view source or launch the existing guarded editor. Camera and dragged positions are independently persisted.
+
+Quick access: `Python UML Canvas: Open 3D UML Canvas`, `Explore 2D / 3D` in the native XP Canvas Activity Bar, or the UML/Flow/3D toolbar switch.
+
+See [V8 architecture](docs/V8_3D_ARCHITECTURE.md) and [current validation](docs/VALIDATION_V8_1.md). AI semantic grouping remains solely a deferred specification in `specs/AI_SEMANTIC_LAYOUT_DEFERRED.md`.
