@@ -5,10 +5,11 @@ const icons:Record<string,string>={module:'symbol-module',class:'symbol-class',f
 export interface UmlCardHeaderProps {
   symbol:GraphNode;expanded:boolean;pinned:boolean;
   onExpand:()=>void;onBlame:()=>void;onPin:()=>void;onOpen:()=>void;
+  reviewActive?:boolean;reviewCount?:{open:number;resolved:number;total:number};onReview?:()=>void;
 }
 /** Code identity is always visible. Secondary actions are accessible through a single
  * overflow button; the editor action remains a direct button at every detail tier. */
-export function UmlCardHeader({symbol:n,expanded,pinned,onExpand,onBlame,onPin,onOpen}:UmlCardHeaderProps){
+export function UmlCardHeader({symbol:n,expanded,pinned,onExpand,onBlame,onPin,onOpen,reviewActive,reviewCount,onReview}:UmlCardHeaderProps){
   const [menu,setMenu]=useState(false);
   const title=n.name==='__root__'?n.module:n.name;
   return <div className="uml-heading">
@@ -17,6 +18,9 @@ export function UmlCardHeader({symbol:n,expanded,pinned,onExpand,onBlame,onPin,o
       <span className="uml-eyebrow">«{n.kind==='module'?'module':n.stereotype||n.kind}»{n.async_?' · async':''}</span>
       <strong className="uml-title">{title}</strong>
     </div>
+    {(reviewActive||Boolean(reviewCount?.total))&&<button type="button" className={`review-node-badge nodrag nopan ${reviewCount?.open?'has-open':''}`} title={`${reviewCount?.open??0} open, ${reviewCount?.resolved??0} resolved review threads`} aria-label={`Review ${n.name}: ${reviewCount?.open??0} open threads`} onClick={e=>{e.stopPropagation();onReview?.();}}>
+      <i className="codicon codicon-comment-discussion"/><span>{reviewCount?.total??'+'}</span>
+    </button>}
     <div className="node-actions nodrag nopan" role="toolbar" aria-label={`Actions for ${n.qualifiedName}`}>
       <button type="button" className="icon-button node-action" aria-label={`Open ${n.name} in VS Code editor`} title="Open in VS Code editor" onClick={e=>{e.stopPropagation();onOpen();}}><i className="codicon codicon-go-to-file"/></button>
       <div className="node-overflow" onBlur={e=>{if(!e.currentTarget.contains(e.relatedTarget as HTMLElement|null))setMenu(false);}}>

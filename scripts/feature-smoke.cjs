@@ -6,6 +6,7 @@ const compiled=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.
 const mod={exports:{}};
 const requireStub=name=>{
  if(name==='../elkLayout')return {calculateLayout:async()=>({}),nodeSize:()=>({width:320,height:150})};
+ if(name==='../../shared/spatialGraph')return {};
  throw Error('Unexpected dependency '+name);
 };
 new Function('module','exports','require',compiled)(mod,mod.exports,requireStub);

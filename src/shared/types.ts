@@ -1,10 +1,15 @@
+import type {SpatialLayoutKind,Vector3} from './spatialGraph';
+import type {CognitionAction} from '../review/reviewReasoning';
+import type {SemanticZoomStops} from './semanticZoom';
+import type {ReviewLineOverlay} from './reviewLineOverlay';
+import type {ReviewAction,ReviewScope,ReviewSnapshot} from '../review/reviewTypes';
 import type { GitCommit } from './gitHistory';
 import type { BlameResult } from './blame';
 export type NodeKind = 'module' | 'class' | 'function' | 'method' | 'property' | 'external';
 export type EdgeKind = 'imports' | 'calls' | 'creates' | 'inherits' | 'references' | 'contains' | 'realizes';
 export type Confidence = 'resolved' | 'ambiguous' | 'unresolved';
 export type Altitude = 'architecture' | 'package' | 'module' | 'code';
-export type LayoutMode = 'architecture' | 'file' | 'investigation' | 'change' | 'spread';
+export type LayoutMode = 'architecture' | 'file' | 'investigation' | 'change' | 'spread' | 'folder' | 'hub' | 'class' | 'community' | 'review';
 export type ChangeStatus = 'ADDED' | 'MODIFIED' | 'REMOVED' | 'IMPACTED' | 'UNCHANGED' | 'AMBIGUOUS';
 export interface SourceRange { startLine: number; startCharacter: number; endLine: number; endCharacter: number; }
 export interface Evidence { id?: string; uri: string; range: SourceRange; version: number; contentHash?: string; language: string; adapter: string; }
@@ -39,13 +44,19 @@ export interface CanvasState {
   layoutMode?: LayoutMode; layoutPositions?: Partial<Record<LayoutMode,Record<string,XY>>>;
   /** Persisted viewport dimensions apply only to explicit expanded code previews. */
   nodeSizes?: Record<string, NodeDimensions>;
-  lens?: 'uml' | 'sankey'; flowKind?: 'calls' | 'imports' | 'references' | 'creates';
+  /** Three adjustable transition zooms: overview→UML→anatomy→source. */
+  semanticZoomStops?: SemanticZoomStops;
+  /** Renderer choice is independent of the canonical graph and graph filters. */
+  lens?: 'uml' | 'sankey' | 'spatial';
+  spatialLayout?: SpatialLayoutKind; spatialPositions?: Record<string,Vector3>;
+  spatialCamera?: {position:Vector3;target:Vector3};
+  flowKind?: 'calls' | 'imports' | 'references' | 'creates';
 }
 export const DEFAULT_CANVAS_STATE: CanvasState = {
   schema: 1, altitude: 'code', focusedFile: null, selectedNode: null,
   zoom: 1, viewport: { x: 0, y: 0, zoom: 1 }, expanded: [], pinned: {}, manualPositions: {},
   edgeKinds: ['calls', 'imports', 'inherits', 'creates'], trace: 'all', traceDepth: 2,
-  history: [], historyIndex: -1, explodeMethods: false, lens: 'uml', flowKind: 'calls', layoutMode:'architecture', layoutPositions:{},
+  history: [], historyIndex: -1, explodeMethods: false, lens: 'uml', spatialLayout:'folder', spatialPositions:{}, flowKind: 'calls', layoutMode:'architecture', layoutPositions:{},
 };
 import type { SourceGraphDelta } from '../core/graph/GraphDelta';
 export type ToWebview =
@@ -54,13 +65,28 @@ export type ToWebview =
   | { type: 'focus'; file?: string; node?: string }
   | { type: 'revealSymbol'; nodeId: string; file: string }
   | { type: 'status'; message: string }
-  | { type: 'action'; action:'align'|'reset'|'fit'|'spread'|'history' }
+  | { type: 'action'; action:'align'|'reset'|'fit'|'spread'|'history'|'3d' }
   | { type: 'diff'; graph: SourceGraph; baseline: string }
-  | { type: 'sourcePreview'; requestId: string; nodeId: string; contentHash: string; source?: string; stale: boolean; error?: string }
+  | { type: 'sourcePreview'; requestId: string; nodeId: string; contentHash: string; source?: string; stale: boolean; truncated?: boolean; error?: string }
+  | { type: 'inlineEditResult'; nodeId:string; ok:boolean; error?:string }
+  | { type: 'reviewLineOverlay'; result:ReviewLineOverlay }
   | { type: 'stateAck'; revision: number }
   | { type: 'gitHistory'; commits: GitCommit[]; error?: string }
-  | { type: 'gitBlame'; result: BlameResult };
+  | { type: 'gitBlame'; result: BlameResult }
+  | { type: 'reviewSnapshot'; review: ReviewSnapshot }
+  | { type: 'reviewClosed' }
+  | { type: 'reviewError'; message: string }
+  | { type: 'reviewRevisions'; revisions:string[] }
+  | { type: 'reviewRevisionGraph'; revision:string; graph:SourceGraph };
 export type FromWebview =
+  | { type: 'reviewOpen'; scope: ReviewScope; reference?: string }
+  | { type: 'reviewAction'; action: ReviewAction }
+  | { type: 'reviewDiff'; path: string }
+  | { type: 'reviewOpenUrl'; url: string }
+  | { type: 'reviewClose' }
+  | { type: 'reviewCognition'; action:CognitionAction }
+  | { type: 'reviewRevisionsRequest' }
+  | { type: 'reviewRevisionLoad'; revision:string }
   | { type: 'ready' }
   | { type: 'openNode'; nodeId: string; cursor?: SourceCursor }
   | { type: 'selectNode'; nodeId: string }
@@ -71,4 +97,6 @@ export type FromWebview =
   | { type: 'getGitHistory'; limit?: number }
   | { type: 'getGitBlame'; nodeId: string }
   | { type: 'openSourceRegion'; nodeId:string; regionId:string }
-  | { type: 'getSourcePreview'; nodeId: string; requestId: string; expectedHash: string };
+  | { type: 'getSourcePreview'; nodeId: string; requestId: string; expectedHash: string }
+  | { type: 'applyInlineEdit'; nodeId:string; expectedHash:string; originalSource:string; updatedSource:string }
+  | { type: 'getReviewLineOverlay'; nodeId:string };

@@ -24,3 +24,11 @@ dist/**/*.vsix
 dist/test/**
 dist/vsix-verification.json
 !python/analyzer.py
+src/**
+studies/**
+CODEX_INTEGRATE*
+*.patch
+.vscode/**
+extester*.json
+tsconfig*.json
+*.config.*

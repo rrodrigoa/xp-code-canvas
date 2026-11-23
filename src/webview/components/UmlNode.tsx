@@ -15,10 +15,14 @@ import { BlameSummary } from './BlameSummary';
 import type { BlameResult } from '../../shared/blame';
 import { semanticRole, type StructureSummary, type SemanticDetail } from '../../shared/semanticVisuals';
 import { selectionToSourceCursor } from '../sourceCursor';
+import {InlinePythonEditor} from './InlinePythonEditor';
+import type {ReviewLineOverlay} from '../../shared/reviewLineOverlay';
+import type {ReviewTarget} from '../../review/reviewTypes';
 
 export type UmlNodeData = {
   symbol: GraphNode; members: GraphNode[]; summary:StructureSummary; detail:SemanticDetail;
   onExpand: (id:string)=>void; onInspectPart:(id:string)=>void; expanded:boolean; pinned:boolean; portKinds?:EdgeKind[];memberPorts?:MemberPort[];cardWidth?:number;
+  historicalView?:boolean;reviewStatus?:string;reviewActive?:boolean;reviewCount?:{open:number;resolved:number;total:number};onReview?:(target:ReviewTarget)=>void;
 };
 export type UmlFlowNode = Node<UmlNodeData,'uml'>;
 const changeLabel:Record<string,string>={ADDED:'Added',MODIFIED:'Modified',REMOVED:'Removed',IMPACTED:'Impacted',AMBIGUOUS:'Uncertain'};
@@ -27,12 +31,13 @@ function visibility(name:string):string{
   if(name.startsWith('_')&&!name.startsWith('__'))return '#';
   return '+';
 }
-function HighlightedCode({code,startLine,startCharacter,blame,onCaret}:{code:string;startLine:number;startCharacter:number;blame?:BlameResult;onCaret:(cursor:SourceCursor|null)=>void}){
+function HighlightedCode({code,startLine,startCharacter,blame,onCaret,overlay}:{code:string;startLine:number;startCharacter:number;blame?:BlameResult;overlay?:ReviewLineOverlay;onCaret:(cursor:SourceCursor|null)=>void}){
   const source=useMemo(()=>code.slice(0,20000).replace(/\r\n/g,'\n').split('\n'),[code]);
   const attributed=useMemo(()=>new Map((blame?.status==='clean'?blame.lines:[]).map(line=>[line.line,line])),[blame]);
   const authors=useMemo(()=>new Map((blame?.summary?.authors??[]).map((a,i)=>[a.author,i%6])),[blame]);
   const [inspectLine,setInspectLine]=useState<number|null>(null);
   const active=inspectLine===null?undefined:attributed.get(inspectLine);
+  const changedLines=useMemo(()=>new Set(overlay?.addedLines??[]),[overlay]);
   const sourceRef=React.useRef<HTMLDivElement>(null);
   const rememberSelection=()=>{
     const selection=window.getSelection();
@@ -43,14 +48,14 @@ function HighlightedCode({code,startLine,startCharacter,blame,onCaret}:{code:str
     onCaret(cursor??null);
   };
   return <div ref={sourceRef} className="source-preview source-with-gutter nodrag nowheel nopan" tabIndex={0} role="region" aria-label="Read-only selectable Python source with line numbers and Git attribution" onPointerDown={()=>onCaret(null)} onMouseUp={rememberSelection} onKeyUp={rememberSelection} onWheel={e=>{if(!e.ctrlKey&&!e.metaKey)e.stopPropagation();}}>
-    {active&&<div className="source-attribution-card nodrag nopan" role="status"><div><i className="codicon codicon-git-commit"/> Line {active.line} Â· {active.author}</div>
+    {active&&<div className="source-attribution-card nodrag nopan" role="status"><div><i aria-hidden="true" className="codicon codicon-git-commit"/> Line {active.line} Â· {active.author}</div>
       <p>{active.summary} Â· {new Date(active.timestamp*1000).toLocaleDateString()} Â· <code>{active.hash.slice(0,10)}</code></p>
-      <button type="button" className="source-attribution-close" onClick={()=>setInspectLine(null)} aria-label="Close line attribution"><i className="codicon codicon-close"/></button>
+      <button type="button" className="source-attribution-close" onClick={()=>setInspectLine(null)} aria-label="Close line attribution"><i aria-hidden="true" className="codicon codicon-close"/></button>
       <button type="button" className="source-compare-commit" onClick={()=>request({type:'gitDiff',baseline:active.hash})}>Compare workspace against commit</button>
     </div>}
     {source.map((line,i)=>{
       const lineNumber=startLine+i+1, git=attributed.get(lineNumber);
-      return <div className="source-code-row" data-source-line={lineNumber} key={i}>
+      return <div className={`source-code-row ${changedLines.has(lineNumber-1)?'review-added-source-line':''}`} data-source-line={lineNumber} key={i} title={changedLines.has(lineNumber-1)?'Added or modified compared with selected review baseline':undefined}>
         <span className="source-line-number" aria-hidden="true">{lineNumber}</span>
         {git?<button type="button" className={`source-blame-mark has-blame blame-dot-${authors.get(git.author)??0} nodrag nopan`} title={`${git.author} Â· ${git.summary} Â· ${git.hash.slice(0,8)}`} aria-label={`Inspect Git attribution for line ${lineNumber}`} onClick={()=>setInspectLine(lineNumber)}/>:<span className="source-blame-mark" aria-hidden="true"/>}
         <code className="language-python source-text-segment" data-source-length={line.length} dangerouslySetInnerHTML={{__html:Prism.highlight(line||' ',Prism.languages.python,'python')}} />
@@ -68,14 +73,25 @@ export function UmlNodeComponent({id,data,selected}:NodeProps<UmlFlowNode>){
   const preferredSize=useCanvasStore(s=>s.state.nodeSizes?.[id]);
   const [resizeDraft,setResizeDraft]=useState<NodeDimensions|null>(null);
   const [selectedCaret,setSelectedCaret]=useState<SourceCursor|null>(null);
+  const inlineDraft=useCanvasStore(s=>s.inlineDrafts[id]);
+  const clearDraft=useCanvasStore(s=>s.clearInlineDraft);
+  const setDraft=useCanvasStore(s=>s.setInlineDraft);
+  const [inlineEditing,setInlineEditing]=useState(Boolean(inlineDraft));
+  const editResult=useCanvasStore(s=>s.inlineEditResults[id]);
+  const review=useCanvasStore(s=>s.review);
+  const reviewOverlay=useCanvasStore(s=>s.reviewLineOverlays[id]);
   useEffect(()=>setSelectedCaret(null),[n.contentHash,n.version,id]);
   useEffect(()=>{updateInternals(id);},[id,detail,expanded,blame,data.portKinds?.join(','),data.memberPorts?.map(p=>p.id).join(','),updateInternals]);
   const codeLevel=detail>=3, isClass=n.kind==='class', isModule=n.kind==='module';
   const role=semanticRole(n.kind);
   useEffect(()=>{
-    if(!codeLevel||n.baselineOnly)return;
+    if(codeLevel&&!data.historicalView&&review&&n.change&&n.change!=='UNCHANGED'&&!n.baselineOnly)
+      request({type:'getReviewLineOverlay',nodeId:id});
+  },[id,codeLevel,review?.reviewKey,n.contentHash,n.change,n.baselineOnly,data.historicalView]);
+  useEffect(()=>{
+    if(!codeLevel||n.baselineOnly||data.historicalView)return;
     request({type:'getSourcePreview',nodeId:id,requestId:`${id}:${n.contentHash??n.version}`,expectedHash:n.contentHash??''});
-  },[id,codeLevel,n.contentHash,n.version,n.baselineOnly]);
+  },[id,codeLevel,n.contentHash,n.version,n.baselineOnly,data.historicalView]);
   const open=()=>request({type:'openNode',nodeId:n.id});
   const getBlame=()=>request({type:'getGitBlame',nodeId:n.id});
   const editSource=()=>request({type:'openNode',nodeId:n.id,cursor:selectedCaret??{line:n.range.startLine,character:0}});
@@ -108,12 +124,14 @@ export function UmlNodeComponent({id,data,selected}:NodeProps<UmlFlowNode>){
       onResizeEnd={(_event,params)=>saveSize({width:Math.round(params.width),height:Math.round(params.height)})}>
       <i className="codicon codicon-arrow-both" aria-hidden="true"/>
     </NodeResizeControl>}
-    <UmlCardHeader symbol={n} expanded={expanded} pinned={pinned} onExpand={()=>onExpand(id)} onBlame={getBlame}
+    <UmlCardHeader symbol={n} expanded={expanded} pinned={pinned} onExpand={()=>onExpand(id)} onBlame={getBlame} reviewCount={data.reviewCount} reviewActive={Boolean(data.reviewActive)&&!data.historicalView}
+      onReview={()=>data.onReview?.({nodeId:id,uri:n.uri,qualifiedName:n.qualifiedName})}
       onPin={()=>pinned?unpin(id):pin(id,flow.getNode(id)?.position??{x:0,y:0})} onOpen={open}/>
     <div className={codeLevel?'uml-source-context nodrag nowheel nopan':undefined}>
     {detail===0&&summary.parts.length>0&&<div className="compact-structure"><StructureMap summary={summary} variant="minimap" onSelect={onInspectPart}/></div>}
-    {status&&<div className="node-status-line" role="status"><span className="status-dot"/><span>{changeLabel[status]}</span>{n.baselineOnly&&<span>Â· Historical</span>}</div>}
-    {n.stale&&<div className="node-status-line stale-label"><i className="codicon codicon-warning"/> Analysis from last valid edit</div>}
+    {data.reviewStatus&&data.reviewStatus!=='unseen'&&<div className="node-status-line review-status-line" title="Reviewer-recorded status, not code correctness"><i aria-hidden="true" className="codicon codicon-checklist"/> {data.reviewStatus}</div>}
+    {status&&<div className="node-status-line" role="status"><span className="status-dot"/><span>{changeLabel[status]}</span>{n.baselineOnly&&<span>· Historical</span>}</div>}
+    {n.stale&&<div className="node-status-line stale-label"><i aria-hidden="true" className="codicon codicon-warning"/> Analysis from last valid edit</div>}
     {detail===1&&<>
       {isClass&&<>
         <div className="uml-compartment" aria-label="Class attributes">
@@ -134,18 +152,26 @@ export function UmlNodeComponent({id,data,selected}:NodeProps<UmlFlowNode>){
     {blame&&detail>=1&&<BlameSummary result={blame} compact={detail<3}/>}
     {detail===2&&summary.total===0&&<div className="structure-summary-empty">{n.kind==='function'||n.kind==='method'?'Function body Â· select to read source':'No nested declarations indexed'}</div>}
     {detail>=2&&isClass&&n.attributes.length>0&&<section className="field-strip" aria-label="Indexed class fields">
-      <div className="field-caption"><i className="codicon codicon-symbol-field"/> FIELDS <span>{n.attributes.length} indexed</span></div>
+      <div className="field-caption"><i aria-hidden="true" className="codicon codicon-symbol-field"/> FIELDS <span>{n.attributes.length} indexed</span></div>
       <div className="field-tokens">{n.attributes.slice(0,14).map(a=><span key={a.name} className="field-token" title={`${a.name}: ${a.type??'type unknown'} â€” indexed attribute; source range not independently resolved`}>{a.name}</span>)}
         {n.attributes.length>14&&<span className="field-more">+{n.attributes.length-14}</span>}</div>
     </section>}
     </div>
     {codeLevel&&<div className="uml-source">
-      <div className="source-heading nodrag nopan" title="Read-only source preview">
+      <div className="source-heading nodrag nopan" title="Source viewport: preview or guarded inline editing">
         <span className="codicon codicon-code"/><span className="source-heading-file">{n.uri.split('/').pop()}</span>
-        <span className="read-only-label">PREVIEW</span>
-        <button type="button" onClick={e=>{e.stopPropagation();editSource();}} className="open-code nodrag nopan" title="Edit at selected source cursor in VS Code">Edit <i className="codicon codicon-arrow-right"/></button>
+        <span className="read-only-label">{data.historicalView?'HISTORICAL':inlineEditing?'EDITING':'PREVIEW'}</span>
+        {!inlineEditing&&reviewOverlay&&reviewOverlay.sourceHash===n.contentHash&&!reviewOverlay.message&&<span className="review-line-summary" title="Line counts from actual Git baseline comparison">+{reviewOverlay.addedCount} / −{reviewOverlay.removedCount}</span>}
+        {!inlineEditing&&reviewOverlay?.message&&<span className="review-line-unavailable" title={reviewOverlay.message}>Historical source · use native diff</span>}
+        {data.reviewActive&&!data.historicalView&&<button type="button" className="review-source-comment nodrag nopan" title="Leave a review note on the selected source line" aria-label={`Review selected source line in ${n.name}`} onClick={e=>{e.stopPropagation();data.onReview?.({nodeId:id,uri:n.uri,qualifiedName:n.qualifiedName,line:selectedCaret?.line??n.range.startLine,side:'RIGHT'});}}><i aria-hidden="true" className="codicon codicon-comment-discussion"/> Comment</button>}
+        {!data.historicalView&&(!review||review.scope==='working'||review.scope==='unstaged')&&['class','function','method','property'].includes(n.kind)&&!n.baselineOnly&&!n.stale&&!preview?.stale&&!preview?.truncated&&preview?.source&&!inlineEditing&&<button type="button" className="open-code nodrag nopan" title="Edit Python source inline with explicit save" onClick={e=>{e.stopPropagation();setInlineEditing(v=>!v);}}>Edit here <i aria-hidden="true" className="codicon codicon-edit"/></button>}
+        <button type="button" onClick={e=>{e.stopPropagation();editSource();}} className="open-code nodrag nopan" title="Edit at selected cursor in the native VS Code editor">Native editor <i aria-hidden="true" className="codicon codicon-arrow-right"/></button>
       </div>
-      {preview?.source?<HighlightedCode code={preview.source} startLine={n.range.startLine} startCharacter={n.range.startCharacter} blame={blame} onCaret={setSelectedCaret}/>:<div className="source-preview source-placeholder nodrag" role="status">{preview?.error??'Loading source previewâ€¦'}</div>}
+      {data.historicalView?<div className="source-preview source-placeholder nodrag" role="status">Historical architecture snapshot. The live source editor is not a historical preview; open the native review diff to inspect historical code.</div>:inlineEditing&&(preview?.source||inlineDraft)&&(!review||review.scope==='working'||review.scope==='unstaged')?
+        <InlinePythonEditor nodeId={id} initialSource={inlineDraft?.originalSource??preview?.source??''} hash={n.contentHash??''} startLine={n.range.startLine} startCharacter={n.range.startCharacter} initialDraft={inlineDraft}
+          onDraftChange={updatedSource=>setDraft(id,{originalSource:inlineDraft?.originalSource??preview?.source??'',updatedSource,expectedHash:inlineDraft?.expectedHash??n.contentHash??''})}
+          result={editResult} onClose={()=>{clearDraft(id);setInlineEditing(false);}}/>:
+        preview?.source?<HighlightedCode code={preview.source} startLine={n.range.startLine} startCharacter={n.range.startCharacter} blame={blame} onCaret={setSelectedCaret} overlay={reviewOverlay&&reviewOverlay.sourceHash===n.contentHash&&!reviewOverlay.message?reviewOverlay:undefined}/>:<div className="source-preview source-placeholder nodrag" role="status">{preview?.error??'Loading source preview…'}</div>}
     </div>}
     <footer className="uml-footer"><span><i className="codicon codicon-file-code" aria-hidden="true"/> {n.uri.split('/').pop()}</span><span>L{n.range.startLine+1}{n.count&&n.count>1?` Â· ${n.count} refs`:''}</span></footer>
 

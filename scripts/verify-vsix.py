@@ -25,6 +25,8 @@ with zipfile.ZipFile(artifact) as archive:
     for source in Path('python/src').rglob('*.py'):
         assert f'extension/{source.as_posix()}' in names, f'Missing analyzer module: {source}'
     assert any('/assets/browserElk-' in name for name in names), 'Missing ELK worker bundle'
+    assert any('/assets/SpatialGraph3D-' in name for name in names), 'Missing lazy WebGL bundle'
+    assert b'.spatial-root' in archive.read('extension/dist/webview/assets/app.css'), 'Lazy WebGL styles missing from host CSS entry'
     forbidden = ('node_modules/', '.validation-runtime/', '.python-test-deps/',
                  'test-resources/', 'test-results/', 'dist/test/')
     assert 'extension/dist/vsix-verification.json' not in names, 'Stale artifact verification packaged'

@@ -14,6 +14,10 @@ import {NativeEditorNavigator} from '../../src/extension/controllers/NativeEdito
 import {SymbolTreeProvider,GitTreeProvider} from '../../src/extension/controllers/CanvasSidebar';
 import {snapshotGit} from '../../src/extension/gitSnapshot';
 import type {GraphNode} from '../../src/shared/types';
+import {GitReviewEngine} from '../../src/extension/review/GitReviewEngine';
+import {LocalReviewNotes} from '../../src/extension/review/LocalReviewNotes';
+import {createVisualizationProjection} from '../../src/shared/visualizationProjection';
+import {DEFAULT_CANVAS_STATE} from '../../src/shared/types';
 
 const exec=promisify(execFile);
 suite('Real Flask repository integration',()=>{
@@ -151,5 +155,49 @@ suite('Real Flask repository integration',()=>{
   assert.ok(anatomical);assert.equal(await navigator.openRegion(anatomical,anatomical.anatomy![0],vscode.ViewColumn.Two),true);
   assert.equal(vscode.window.activeTextEditor?.selection.active.line,anatomical.anatomy![0].range.startLine);
   evidence.navigation={group:2,declarationLine:config.selectionRange.startLine,anatomyLine:anatomical.anatomy![0].range.startLine};
+ });
+ test('reviews real Flask PR 6176 at exact GitHub source commits in both renderers',async()=>{
+  // Read-only metadata independently obtained from GitHub; no remote mutation.
+  const storage=new Map<string,unknown>();
+  const state={keys:()=>[...storage.keys()],get:<T>(key:string,fallback?:T)=>(storage.get(key)??fallback) as T,update:async(key:string,value:unknown)=>{storage.set(key,value);}} as vscode.Memento;
+  const engine=new GitReviewEngine(context,new LocalReviewNotes(state));
+  const pr={owner:'pallets',repo:'flask',number:6176,title:'add `versionchanged` for ctx signature change',url:'https://github.com/pallets/flask/pull/6176',state:'closed',draft:false,
+    baseSha:'d04a0c15a83c78186cf31dc5d226b3110321b9e5',headSha:'bfc8f983871dcadf0492578d9ab72d951b34c19c'};
+  const before=JSON.stringify(index.graph),review=await engine.open('pr',index.graph,{pr});
+  assert.equal(review.analysisAvailable,true,review.message);assert.ok(review.comparison);
+  assert.deepEqual(review.files.map(f=>f.path),['src/flask/app.py']);
+  assert.equal(review.baseline,(await git('merge-base',pr.baseSha,pr.headSha)).trim());
+  assert.ok(review.graph.nodes.some(n=>n.change==='MODIFIED'));
+  const view={...DEFAULT_CANVAS_STATE,altitude:'code' as const,explodeMethods:true};
+  assert.deepEqual(createVisualizationProjection(review.graph,{...view,lens:'uml'},{review}),createVisualizationProjection(review.graph,{...view,lens:'spatial'},{review}));
+  assert.equal(JSON.stringify(index.graph),before,'PR review must not modify the live index');
+  evidence.realPR={url:pr.url,base:pr.baseSha,head:pr.headSha,files:review.files,changed:review.graph.nodes.filter(n=>n.change&&n.change!=='UNCHANGED').length,transformations:review.comparison!.transformations.length};
+  if(process.env.XP_EVIDENCE_DIR){await fs.mkdir(process.env.XP_EVIDENCE_DIR,{recursive:true});await fs.writeFile(path.join(process.env.XP_EVIDENCE_DIR,'flask-pr-6176.json'),JSON.stringify(review));}
+ });
+ test('separates staged and editor changes in real Flask with 25 additional evidence files',async()=>{
+  const state={get:(_key:string,fallback:unknown)=>fallback,update:async()=>{}} as unknown as vscode.Memento;
+  const engine=new GitReviewEngine(context,new LocalReviewNotes(state));
+  const uri=vscode.Uri.parse(config.uri),doc=await vscode.workspace.openTextDocument(uri),text=doc.getText();
+  const probes=Array.from({length:25},(_,i)=>`xp_canvas_validation_${i}.md`);
+  try{
+   const stagedEdit=new vscode.WorkspaceEdit();stagedEdit.insert(uri,doc.positionAt(text.length),'\n\ndef xp_staged_probe():\n    return 1\n');await vscode.workspace.applyEdit(stagedEdit);await doc.save();
+   for(const name of probes)await fs.writeFile(path.join(root,name),'Staged review evidence\n');
+   await git('add','--','src/flask/config.py',...probes);
+   // Reopen the disk edit before applying an authoritative unsaved buffer change.
+   const current=await vscode.workspace.openTextDocument(uri);
+   const edit=new vscode.WorkspaceEdit();edit.insert(uri,current.positionAt(current.getText().length),'\n\ndef xp_unstaged_probe():\n    return 2\n');await vscode.workspace.applyEdit(edit);
+   index.schedule(uri);await index.flush();
+   const staged=await engine.open('staged',index.graph),unstaged=await engine.open('unstaged',index.graph),working=await engine.open('working',index.graph);
+   assert.equal(staged.files.length,26);assert.ok(staged.graph.nodes.some(n=>n.name==='xp_staged_probe'&&n.change==='ADDED'));
+   assert.ok(!staged.graph.nodes.some(n=>n.name==='xp_unstaged_probe'));
+   assert.ok(unstaged.graph.nodes.some(n=>n.name==='xp_unstaged_probe'&&n.change==='ADDED'));
+   assert.equal(working.files.filter(f=>f.path.endsWith('.md')).length,25);
+   evidence.realStagedReview={files:staged.files.length,unsavedExcludedFromStaged:true,unsavedIncludedInUnstaged:true,markdownEvidence:25};
+  }finally{
+   const restore=new vscode.WorkspaceEdit();restore.replace(uri,new vscode.Range(doc.positionAt(0),doc.positionAt(doc.getText().length)),text);await vscode.workspace.applyEdit(restore);await doc.save();
+   await git('restore','--staged','--','src/flask/config.py',...probes);
+   for(const name of probes)await fs.unlink(path.join(root,name));
+   index.schedule(uri);await index.flush();
+  }
  });
 });

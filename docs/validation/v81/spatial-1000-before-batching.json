@@ -1,0 +1,12 @@
+{
+  "count": 1000,
+  "relations": 2000,
+  "loadMs": 10991,
+  "fps": 6.9624953584905285,
+  "worstFrameMs": 166.70000000000073,
+  "gpuTextures": "20",
+  "drawCalls": "5040",
+  "gpuGeometries": "4021",
+  "jsHeapBytes": 72200000,
+  "errors": []
+}

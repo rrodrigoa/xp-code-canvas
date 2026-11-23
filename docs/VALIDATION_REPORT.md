@@ -1,5 +1,7 @@
 # V6.1 integration — executed validation
 
+> Historical V6.1 record. Current V8.1 integration, executed tests, performance and release limits are in [VALIDATION_V8_1.md](VALIDATION_V8_1.md).
+
 Date: 2026-11-20. Version: **0.6.1**. Branch: `codex/v6-1-usability`, based on current main `efc0274` (fast-forward pull reported up to date). The feature archive was reconciled by file/hunk; main's analyzer, lockfile dependencies, worker, layout readiness, search, Git and packaging fixes were preserved. AI features remain deferred.
 
 | Gate | Executed result |

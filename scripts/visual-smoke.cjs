@@ -11,7 +11,7 @@ function load(relative){
   const module={exports:{}};
   const fakeRequire=(name)=>{
     if(name==='elkjs/lib/elk.bundled.js')return {__esModule:true,default:class ELK{async layout(){return {children:[]};}}};
-    if(name==='../shared/semanticVisuals')return load('src/shared/semanticVisuals.ts');
+    if(name.startsWith('.'))return load(path.relative(path.join(__dirname,'..'),path.resolve(path.dirname(file),name)+'.ts'));
     throw new Error(`Unexpected runtime dependency in visual smoke: ${name}`);
   };
   new Function('module','exports','require',output)(module,module.exports,fakeRequire);

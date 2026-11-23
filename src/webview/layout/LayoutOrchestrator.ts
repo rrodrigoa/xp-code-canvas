@@ -1,9 +1,10 @@
+import {flattenSpatialLayout} from '../../shared/spatialGraph';
 /** V6: presentation-only layout engine. Never mutates the source graph.
  * Geometry is expressed in world coordinates (unscaled pixels). */
-import type {CanvasState, GraphNode, SourceGraph, XY} from '../../shared/types';
+import type {CanvasState, GraphNode, SourceGraph, XY, LayoutMode} from '../../shared/types';
 import {calculateLayout, nodeSize, type NodeSize} from '../elkLayout';
 
-export type LayoutMode='architecture'|'file'|'investigation'|'change'|'spread';
+export type {LayoutMode} from '../../shared/types';
 export type NodeDimensions=ReadonlyMap<string,NodeSize>;
 export interface LayoutBox extends XY {id:string;width:number;height:number;pinned?:boolean}
 
@@ -133,7 +134,13 @@ export async function orchestrateLayout(
 ):Promise<Record<string,XY>> {
   const mode=layoutModeFor(state),size=(n:GraphNode)=>visualBounds(n,state,measured,counts,blamed);
   let positions:Record<string,XY>;
-  if(mode==='spread')positions=spreadLayout(graph,size,state.focusedFile);
+  if(mode==='folder'||mode==='hub'||mode==='class'||mode==='community'||mode==='review'){
+    positions=flattenSpatialLayout(graph,mode);
+    // Use actual card estimates to prevent 3D centroid overlaps after flattening.
+    const boxes=graph.nodes.map(n=>({...positions[n.id],id:n.id,...size(n)}));
+    positions={...positions,...settleMeasuredLayout(boxes,null,52)};
+  }
+  else if(mode==='spread')positions=spreadLayout(graph,size,state.focusedFile);
   else if(mode==='investigation')positions=investigationLayout(graph,state.selectedNode??undefined,size)??await calculateLayout(graph,state,counts,blamed,measured);
   else if(mode==='change')positions=changeLayout(graph,size);
   else positions=await calculateLayout(graph,{...state,focusedFile:mode==='file'?state.focusedFile:null},counts,blamed,measured);
